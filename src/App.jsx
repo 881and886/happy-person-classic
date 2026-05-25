@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Briefcase, Coins, Heart, Trophy, RotateCcw, Dice5, WalletCards, GraduationCap } from "lucide-react";
 
 const animals = ["🐱","🐶","🦊","🐼","🐧","🐸","🦁","🐰","🐵","🐯","🐨","🐻"];
@@ -161,6 +161,8 @@ function applyEffect(player, effect, note="") {
 function dice(n=1) {
   return Array.from({length:n},()=>Math.ceil(Math.random()*6));
 }
+function sleep(ms){ return new Promise(resolve=>setTimeout(resolve, ms)); }
+
 
 function Board({players}) {
   const posMap = {};
@@ -264,8 +266,63 @@ export default function App(){
   const [message,setMessage]=useState("");
   const [winner,setWinner]=useState(null);
   const [lastDice,setLastDice]=useState([]);
+  const [moving,setMoving]=useState(false);
+  const [bgmOn,setBgmOn]=useState(false);
+  const audioRef = useRef(null);
+
+  useEffect(()=>{
+    try {
+      const saved = localStorage.getItem("happyPersonClassicSaveV12");
+      if(saved){
+        const data = JSON.parse(saved);
+        if(data && data.phase && data.players){
+          setPhase(data.phase);
+          setPlayers(data.players);
+          setTurn(data.turn || 0);
+          setMessage(data.message || "已自動恢復上一局遊戲。若要重新開始，請按右上角重開。");
+          setWinner(data.winner || null);
+          setLastDice(data.lastDice || []);
+        }
+      }
+    } catch (e) { console.warn("讀取存檔失敗", e); }
+  },[]);
+
+  useEffect(()=>{
+    if(phase !== "setup"){
+      localStorage.setItem("happyPersonClassicSaveV12", JSON.stringify({phase,players,turn,message,winner,lastDice}));
+    }
+  },[phase,players,turn,message,winner,lastDice]);
+
+  useEffect(()=>{
+    document.body.classList.add("no-pull-refresh");
+    return ()=>document.body.classList.remove("no-pull-refresh");
+  },[]);
 
   const current = players[turn];
+
+  async function toggleBgm(){
+    const audio = audioRef.current;
+    if(!audio) return;
+    try {
+      audio.volume = 0.35;
+      if(audio.paused){
+        await audio.play();
+        setBgmOn(true);
+      } else {
+        audio.pause();
+        setBgmOn(false);
+      }
+    } catch (e) {
+      setMessage("背景音樂無法播放：請確認 bgm.wav 已放在 public 資料夾，並再按一次音樂按鈕。");
+    }
+  }
+
+  function resetGame(){
+    if(confirm("確定要重開遊戲嗎？目前進度會清除。")){
+      localStorage.removeItem("happyPersonClassicSaveV12");
+      setPhase("setup"); setPlayers([]); setTurn(0); setMessage(""); setWinner(null); setLastDice([]); setMoving(false);
+    }
+  }
 
   function updateCurrent(newP){
     setPlayers(prev=>prev.map((p,i)=>i===turn?newP:p));
@@ -275,21 +332,32 @@ export default function App(){
     }
   }
   function nextTurn(){
+    if(moving) return;
     setTurn(t=>(t+1)%players.length);
     setMessage("");
     setLastDice([]);
   }
 
-  function moveSteps(steps){
+  async function moveSteps(steps){
+    if(moving || !current) return;
+    setMoving(true);
     let p = {...current, pocket:{chance:[...current.pocket.chance], exp:[...current.pocket.exp]}, careerExp:{...current.careerExp}, education:[...current.education], history:[...current.history]};
+
     if(p.route){
       const route = careerRoutes[p.route];
-      const old = p.routeIndex;
-      p.routeIndex = Math.min(route.length-1, p.routeIndex + steps);
-      for(let i=old+1;i<=p.routeIndex;i++){
+      const maxIndex = route.length - 1;
+      const actualSteps = Math.min(steps, maxIndex - p.routeIndex);
+      for(let s=0; s<actualSteps; s++){
+        p.routeIndex += 1;
+        const preview = {...p, pocket:{chance:[...p.pocket.chance], exp:[...p.pocket.exp]}, careerExp:{...p.careerExp}, education:[...p.education], history:[...p.history]};
+        setPlayers(prev=>prev.map((pl,i)=>i===turn?preview:pl));
+        setMessage(`${p.name} 在「${p.route}」職業道路前進中：第 ${p.routeIndex + 1} 格／${route.length} 格`);
+        await sleep(360);
+      }
+      for(let i=current.routeIndex+1;i<=p.routeIndex;i++){
         p = applyEffect(p, route[i], `職業道路「${p.route}」：${route[i].name}`);
       }
-      if(p.routeIndex >= route.length-1){
+      if(p.routeIndex >= maxIndex){
         const c = p.route;
         p.careerExp[c] = (p.careerExp[c]||0)+1;
         if(c==="學院"){
@@ -308,18 +376,27 @@ export default function App(){
         p.route = null; p.routeIndex = 0;
       }
       setMessage(`${p.name} 在職業道路前進 ${steps} 步。`);
+      setMoving(false);
       updateCurrent(p);
       return;
     }
-    const oldPos = p.pos;
-    let newPos = (p.pos + steps) % outerBoard.length;
-    if(oldPos + steps >= outerBoard.length){
-      p.cash += p.salary;
-      p.history.unshift(`經過起點／發薪日：領取薪水 $${p.salary.toLocaleString()}。`);
-    }
-    p.pos = newPos;
-    const cell = outerBoard[newPos];
 
+    const oldPos = p.pos;
+    let salaryCount = 0;
+    for(let s=0; s<steps; s++){
+      p.pos = (p.pos + 1) % outerBoard.length;
+      if(p.pos === 0){
+        salaryCount += 1;
+        p.cash += p.salary;
+        p.history.unshift(`經過起點／發薪日：領取薪水 $${p.salary.toLocaleString()}。`);
+      }
+      const preview = {...p, pocket:{chance:[...p.pocket.chance], exp:[...p.pocket.exp]}, careerExp:{...p.careerExp}, education:[...p.education], history:[...p.history]};
+      setPlayers(prev=>prev.map((pl,i)=>i===turn?preview:pl));
+      setMessage(`${p.name} 正在前進：${s+1}／${steps} 步`);
+      await sleep(280);
+    }
+
+    const cell = outerBoard[p.pos];
     if(cell.type==="chance"){
       const card = chanceDeck[Math.floor(Math.random()*chanceDeck.length)];
       if(card.instant){
@@ -337,10 +414,12 @@ export default function App(){
     } else {
       setMessage(`${p.name} 抵達 ${cell.name}。`);
     }
+    setMoving(false);
     updateCurrent(p);
   }
 
   function roll(){
+    if(moving) return;
     const n = current.route ? 1 : 2;
     const ds = dice(n);
     setLastDice(ds);
@@ -348,6 +427,7 @@ export default function App(){
   }
 
   function enterCareer(career, free=false){
+    if(moving) return;
     let p={...current, pocket:{chance:[...current.pocket.chance], exp:[...current.pocket.exp]}, careerExp:{...current.careerExp}, education:[...current.education], history:[...current.history]};
     const cell = outerBoard[p.pos];
     const fee = cell.career===career ? cell.fee : 0;
@@ -364,6 +444,7 @@ export default function App(){
   }
 
   function useChance(idx){
+    if(moving) return;
     const card=current.pocket.chance[idx];
     let p={...current, pocket:{chance:[...current.pocket.chance], exp:[...current.pocket.exp]}, careerExp:{...current.careerExp}, education:[...current.education], history:[...current.history]};
     p.pocket.chance.splice(idx,1);
@@ -376,6 +457,7 @@ export default function App(){
     }
   }
   function sellChance(idx){
+    if(moving) return;
     const card=current.pocket.chance[idx];
     let p={...current, pocket:{chance:[...current.pocket.chance], exp:[...current.pocket.exp]}, history:[...current.history]};
     p.pocket.chance.splice(idx,1);
@@ -384,6 +466,7 @@ export default function App(){
     updateCurrent(p);
   }
   function useExp(idx){
+    if(moving) return;
     const card=current.pocket.exp[idx];
     let p={...current, pocket:{chance:[...current.pocket.chance], exp:[...current.pocket.exp]}, history:[...current.history]};
     p.pocket.exp.splice(idx,1);
@@ -392,19 +475,21 @@ export default function App(){
     setTimeout(()=>moveSteps(card.steps),0);
   }
   function bankrupt(){
+    if(moving) return;
     let p = makePlayer(current.name,current.animal,current.target);
     p.bankruptcies = current.bankruptcies + 1;
     p.history.unshift(`宣告破產：繳回現金與卡片，重新領取本錢 $1,000。`);
     updateCurrent(p);
   }
   function retire(){
+    if(moving) return;
     if(current.retireRights<=0){ setMessage("尚無退休權。"); return; }
     let p={...current, retireRights:current.retireRights-1, happy:current.happy+5, pos:15, route:null, history:[...current.history]};
     p.history.unshift("使用退休權：前往日月潭渡假，快樂 +5。");
     updateCurrent(p);
   }
 
-  if(phase==="setup") return <Setup onStart={(ps)=>{setPlayers(ps);setPhase("game")}} />;
+  if(phase==="setup") return <Setup onStart={(ps)=>{localStorage.removeItem("happyPersonClassicSaveV12"); setPlayers(ps); setTurn(0); setMessage("遊戲開始。請輪流擲骰，最先達成秘密幸福目標者勝出。"); setPhase("game")}} />;
   if(phase==="end") return <div className="page end">
     <h1>🏆 幸福人產生！</h1>
     <h2>{winner.animal} {winner.name} 最先達成預定幸福目標</h2>
@@ -414,36 +499,45 @@ export default function App(){
     </div>
     <h3>全體玩家揭曉</h3>
     {players.map(p=><PlayerPanel key={p.id} p={p} />)}
-    <button className="primary" onClick={()=>location.reload()}><RotateCcw size={16}/>重新開始</button>
+    <button className="primary" onClick={resetGame}><RotateCcw size={16}/>重新開始</button>
   </div>;
 
   const cell = outerBoard[current.pos];
 
   return <div className="game">
+    <audio ref={audioRef} src="/bgm.wav" loop preload="auto" />
     <header>
-      <h1>幸福人 Classic <span>V1.1 回字型棋盤</span></h1>
-      <button onClick={()=>location.reload()}><RotateCcw size={16}/>重開</button>
+      <h1>幸福人 Classic <span>V1.2 操作修正版</span></h1>
+      <div className="header-actions">
+        <button onClick={toggleBgm}>{bgmOn ? "暫停音樂" : "播放音樂"}</button>
+        <button onClick={resetGame}><RotateCcw size={16}/>重開</button>
+      </div>
     </header>
     <main>
       <section className="left">
         <Board players={players}/>
       </section>
       <aside className="right">
+        <div className="log top-log">
+          <h3>最近紀錄</h3>
+          {message && <div className="message top-message">{message}</div>}
+          {current.history.slice(0,8).map((h,i)=><p key={i}>{h}</p>)}
+        </div>
         <div className="turn-card">
           <h2>目前回合：{current.animal} {current.name}</h2>
           <p>只能操作 <b>{current.name}</b> 的人生口袋。</p>
-          <div className="dice-line">{lastDice.length?`骰子：${lastDice.join(" + ")} = ${lastDice.reduce((a,b)=>a+b,0)}`:"尚未擲骰"}</div>
-          <button className="primary" onClick={roll}><Dice5 size={18}/>{current.route ? "職業道路擲 1 顆骰子" : "外圈擲 2 顆骰子"}</button>
-          <button onClick={nextTurn}>結束回合，換下一位</button>
-          <button onClick={retire}>使用退休權去渡假</button>
-          <button className="danger" onClick={bankrupt}>宣告破產重開</button>
+          <div className="dice-line">{moving ? "棋子移動中……" : lastDice.length?`骰子：${lastDice.join(" + ")} = ${lastDice.reduce((a,b)=>a+b,0)}`:"尚未擲骰"}</div>
+          <button className="primary" disabled={moving} onClick={roll}><Dice5 size={18}/>{current.route ? "職業道路擲 1 顆骰子" : "外圈擲 2 顆骰子"}</button>
+          <button disabled={moving} onClick={nextTurn}>結束回合，換下一位</button>
+          <button disabled={moving} onClick={retire}>使用退休權去渡假</button>
+          <button className="danger" disabled={moving} onClick={bankrupt}>宣告破產重開</button>
           {message && <div className="message">{message}</div>}
         </div>
 
         {cell.type==="careerEntry" && !current.route && <div className="action-box">
           <h3>{cell.career} 入口</h3>
           <p>入門費 ${cell.fee.toLocaleString()}；若已有該職業經驗，可免入門費。</p>
-          <button onClick={()=>enterCareer(cell.career)}>進入 {cell.career} 道路</button>
+          <button disabled={moving} onClick={()=>enterCareer(cell.career)}>進入 {cell.career} 道路</button>
         </div>}
 
         <div className="wallet">
@@ -458,25 +552,20 @@ export default function App(){
           {current.pocket.chance.length===0 && <p className="muted">目前沒有機會卡。</p>}
           {current.pocket.chance.map((card,i)=><div className="item-card" key={i}>
             <b>{card.title}</b><p>{card.text}</p>
-            <button onClick={()=>useChance(i)}>使用</button>
-            <button onClick={()=>sellChance(i)}>出售 ${card.sell?.toLocaleString()||"1,000"}</button>
+            <button disabled={moving} onClick={()=>useChance(i)}>使用</button>
+            <button disabled={moving} onClick={()=>sellChance(i)}>出售 ${card.sell?.toLocaleString()||"1,000"}</button>
           </div>)}
           <h4>經驗卡</h4>
           {current.pocket.exp.length===0 && <p className="muted">目前沒有經驗卡。</p>}
           {current.pocket.exp.map((card,i)=><div className="item-card exp" key={i}>
             <b>{card.title}</b><p>{card.text}</p>
-            <button onClick={()=>useExp(i)}>取代骰子</button>
+            <button disabled={moving} onClick={()=>useExp(i)}>取代骰子</button>
           </div>)}
         </div>
 
         <div className="players">
           <h3>玩家紀錄卡</h3>
           {players.map((p,i)=><PlayerPanel key={p.id} p={p} active={i===turn}/>)}
-        </div>
-
-        <div className="log">
-          <h3>最近紀錄</h3>
-          {current.history.slice(0,8).map((h,i)=><p key={i}>{h}</p>)}
         </div>
       </aside>
     </main>
