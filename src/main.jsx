@@ -34,14 +34,46 @@ const careerEvents = {
   開礦:[['挖到礦脈','現金 +5000',{cash:5000}],['坑道事故','現金 -3000、快樂 -2',{cash:-3000,happy:-2}],['技術升級','現金 +2000、名譽 +1',{cash:2000,honor:1}],['環境爭議','名譽 -1',{honor:-1}]]
 };
 const ACHIEVEMENTS = {
-  學院:[['商學學位','商學士','suffix',{salary:1000,honor:1},{type:'money',cash:1000},'薪水 +$1000，名譽 +1；金錢事件加成。'],['教育學位','教授','prefix',{happy:2,honor:2},{career:'學院',honor:1},'快樂 +2，名譽 +2；學院事件名譽加成。'],['科學學位','博士','suffix',{honor:4},{career:'月球探險',honor:1},'名譽 +4；月球事件名譽加成。']],
-  農墾:[['有機農夫','有機農夫','prefix',{happy:4},{career:'農墾',happy:1},'快樂 +4；農墾事件快樂加成。'],['農場主','農場主','suffix',{cash:3000},{career:'農墾',cash:1000},'現金 +$3000；農墾收入加成。'],['地方職人','地方職人','prefix',{honor:3,happy:1},{type:'honor',honor:1},'名譽 +3，快樂 +1；名譽事件加成。']],
-  企業:[['經理人','經理人','prefix',{salary:2000},{career:'企業',cash:1000},'薪水 +$2000；企業收益加成。'],['創業家','創業家','prefix',{cash:5000,happy:-1},{type:'money',cash:1000},'現金 +$5000，快樂 -1；金錢事件加成。'],['董事','董事','suffix',{cash:3000,honor:2},{career:'企業',honor:1},'現金 +$3000，名譽 +2；企業名譽加成。']],
-  航海:[['船長','船長','prefix',{cash:3000,honor:2},{career:'航海',cash:1000},'現金 +$3000，名譽 +2；航海收入加成。'],['探險家','探險家','prefix',{happy:3,honor:1},{type:'chance',happy:1},'快樂 +3，名譽 +1；機會事件加成。'],['國際商人','國際商人','prefix',{salary:1000,cash:2000},{career:'航海',cash:1000},'薪水 +$1000，現金 +$2000。']],
-  月球探險:[['太空人','太空人','prefix',{honor:5},{career:'月球探險',honor:1},'名譽 +5；月球名譽加成。'],['宇宙研究員','宇宙研究員','prefix',{honor:3,happy:1},{career:'月球探險',happy:1},'名譽 +3，快樂 +1。'],['月球英雄','月球英雄','prefix',{cash:3000,happy:2,honor:3},{career:'月球探險',cash:1000},'現金 +$3000，快樂 +2，名譽 +3。']],
-  電影明星:[['巨星','巨星','prefix',{honor:5,cash:2000},{career:'電影明星',honor:1},'名譽 +5，現金 +$2000。'],['全民偶像','偶像','prefix',{happy:3,honor:2},{career:'電影明星',happy:1},'快樂 +3，名譽 +2。'],['娛樂教父','娛樂教父','prefix',{cash:5000},{career:'電影明星',cash:1000},'現金 +$5000；電影收入加成。']],
-  從政:[['議員','議員','suffix',{honor:3},{career:'從政',honor:1},'名譽 +3；政治名譽加成。'],['市長','市長','prefix',{salary:2000,honor:2},{career:'從政',cash:1000},'薪水 +$2000，名譽 +2。'],['政治明星','政治明星','prefix',{honor:5,happy:-1},{career:'從政',honor:1},'名譽 +5，快樂 -1。']],
-  開礦:[['礦場主','礦場主','suffix',{cash:5000},{career:'開礦',cash:1000},'現金 +$5000；開礦收入加成。'],['資源大亨','資源大亨','suffix',{cash:8000,happy:-1},{type:'money',cash:1000},'現金 +$8000，快樂 -1。'],['工程專家','工程專家','suffix',{salary:1000,honor:1},{career:'開礦',happy:1},'薪水 +$1000，名譽 +1。']]
+  學院:[
+    ['商學學位','商學士','suffix',{salary:1000,honor:1},{type:'money',cash:500},'加薪 1000；你開始理解市場與財務運作，金錢事件略有加成。'],
+    ['教育學位','教師','prefix',{happy:2,honor:2},{career:'學院',honor:1},'你逐漸獲得學生與同儕信任，學院事件較容易累積名譽。'],
+    ['科學學位','研究員','prefix',{honor:3},{career:'月球探險',honor:1},'你投入未知領域的探索，月球探險相關事件較容易獲得社會認同。']
+  ],
+  農墾:[
+    ['有機農夫','有機農夫','prefix',{happy:4},{career:'農墾',happy:1},'你建立穩定的生活節奏，農墾事件較容易帶來快樂。'],
+    ['農場經營者','農場主','suffix',{salary:500,happy:1},{career:'農墾',cash:500},'加薪 500；你開始有穩定產出，農墾收入事件略有加成。'],
+    ['地方職人','地方職人','prefix',{honor:2,happy:2},{type:'honor',honor:1},'你在地方逐漸被看見，公益與名譽事件較容易獲得認同。']
+  ],
+  企業:[
+    ['管理職位','經理人','prefix',{salary:1000},{career:'企業',cash:500},'加薪 1000；你開始負責更大範圍的工作，企業收益略有加成。'],
+    ['創業試煉','創業家','prefix',{salary:500,happy:-1},{type:'money',cash:500},'加薪 500；你踏上高風險的人生道路，金錢事件略有加成，但壓力增加。'],
+    ['企業治理','董事','suffix',{salary:1500,honor:1},{career:'企業',honor:1},'加薪 1500；你開始進入決策核心，企業事件較容易累積名譽。']
+  ],
+  航海:[
+    ['掌舵資格','船長','prefix',{salary:1000,honor:1},{career:'航海',cash:500},'加薪 1000；你開始能獨立掌舵，航海收益略有加成。'],
+    ['遠方探索','探險家','prefix',{happy:3,honor:1},{type:'chance',happy:1},'你對未知保持熱情，機會事件較容易帶來快樂。'],
+    ['跨海貿易','國際商人','prefix',{salary:1000},{career:'航海',cash:500},'加薪 1000；你建立跨地域人脈，航海收入略有加成。']
+  ],
+  月球探險:[
+    ['太空訓練','太空人','prefix',{honor:4},{career:'月球探險',honor:1},'你開始受到更多人注意，月球探險事件較容易累積名譽。'],
+    ['宇宙研究','宇宙研究員','prefix',{honor:2,happy:1},{career:'月球探險',happy:1},'你對未知世界產生更多興趣，月球事件較容易帶來成就感。'],
+    ['月面任務','月球英雄','prefix',{happy:2,honor:3},{career:'月球探險',cash:500},'你完成高難度任務並受到矚目，月球事件收益略有提升。']
+  ],
+  電影明星:[
+    ['登上舞台','明星','prefix',{honor:4},{career:'電影明星',honor:1},'你開始被觀眾記住，電影事件較容易累積名譽。'],
+    ['人氣累積','偶像','prefix',{happy:2,honor:2},{career:'電影明星',happy:1},'你與支持者建立連結，電影事件較容易帶來快樂。'],
+    ['娛樂版圖','娛樂教父','prefix',{salary:1500},{career:'電影明星',cash:500},'加薪 1500；你開始掌握娛樂資源，電影收入略有加成。']
+  ],
+  從政:[
+    ['公共服務','議員','suffix',{honor:3},{career:'從政',honor:1},'你逐漸獲得地方信任，政治事件較容易累積名譽。'],
+    ['地方治理','市長','prefix',{salary:1500,honor:1},{career:'從政',cash:500},'加薪 1500；你承擔更多公共責任，政治資源略有加成。'],
+    ['政治舞台','政治明星','prefix',{honor:4,happy:-1},{career:'從政',honor:1},'你開始成為輿論焦點，政治事件名譽提升，但生活壓力增加。']
+  ],
+  開礦:[
+    ['礦場管理','礦場主','suffix',{salary:1000},{career:'開礦',cash:500},'加薪 1000；你掌握生產現場，開礦收益略有加成。'],
+    ['資源整合','資源大亨','suffix',{salary:1500,happy:-1},{type:'money',cash:500},'加薪 1500；你取得更多資源調度權，但生活壓力增加。'],
+    ['工程專業','工程專家','suffix',{salary:1000,honor:1},{career:'開礦',happy:1},'加薪 1000；你以專業解決難題，開礦事件較容易帶來成就感。']
+  ]
 };
 
 const TIER_INFO = {
@@ -85,10 +117,10 @@ const pick = a => a[Math.floor(Math.random()*a.length)];
 const diceFace = n => ['⚀','⚁','⚂','⚃','⚄','⚅'][n-1] || '🎲';
 const roll = n => Array.from({length:n},()=>1+Math.floor(Math.random()*6));
 const total = a => a.reduce((s,n)=>s+n,0);
-function mkPlayer(i){return {id:randId(),name:`玩家${i+1}`,animal:ANIMALS[i],cash:10000,salary:1000,wealth:10,happy:0,honor:0,target:{wealth:20,happy:20,honor:20},targetLocked:false,route:'outer',pos:0,career:null,careerPos:0,careerExp:{},titles:[],activeTitleId:null,retirementRights:0,pocket:{chance:[],exp:[]},bankrupt:0};}
+function mkPlayer(i){return {id:randId(),name:`玩家${i+1}`,animal:ANIMALS[i],cash:5000,salary:1000,wealth:5,happy:0,honor:0,target:{wealth:34,happy:33,honor:33},targetLocked:false,route:'outer',pos:0,career:null,careerPos:0,careerExp:{},titles:[],activeTitleId:null,retirementRights:0,pocket:{chance:[],exp:[]},bankrupt:0};}
 function displayName(p){const t=(p.titles||[]).find(x=>x.id===p.activeTitleId); if(!t)return p.name; return t.position==='suffix'?`${p.name}${t.title}`:`${t.title}${p.name}`;}
-function deltaText(d={}){const a=[]; if(d.cash)a.push(`現金 ${d.cash>0?'+':''}$${Math.abs(d.cash)}`); if(d.salary)a.push(`薪水 ${d.salary>0?'+':''}$${Math.abs(d.salary)}`); if(d.happy)a.push(`快樂 ${d.happy>0?'+':''}${d.happy}`); if(d.honor)a.push(`名譽 ${d.honor>0?'+':''}${d.honor}`); return a.join('、')||'沒有變化';}
-function applyDelta(p,d={}){let np={...p}; if(d.cash)np.cash+=d.cash; if(d.salary)np.salary=Math.max(0,np.salary+d.salary); if(d.happy)np.happy=Math.max(0,np.happy+d.happy); if(d.honor)np.honor=Math.max(0,np.honor+d.honor); if(np.cash<=0){np={...np,cash:10000,wealth:10,happy:0,honor:0,bankrupt:(np.bankrupt||0)+1,pocket:{chance:[],exp:[]}};} else np.wealth=Math.floor(np.cash/1000); return np;}
+function deltaText(d={}){const a=[]; if(d.cash)a.push(`現金 ${d.cash>0?'+':''}$${Math.abs(d.cash)}`); if(d.salary)a.push(`加薪 ${Math.abs(d.salary)}`); if(d.happy)a.push(`快樂 ${d.happy>0?'+':''}${d.happy}`); if(d.honor)a.push(`名譽 ${d.honor>0?'+':''}${d.honor}`); return a.join('、')||'沒有變化';}
+function applyDelta(p,d={}){let np={...p}; if(d.cash)np.cash+=d.cash; if(d.salary)np.salary=Math.max(0,np.salary+d.salary); if(d.happy)np.happy+=d.happy; if(d.honor)np.honor+=d.honor; if(np.cash<=0){np={...np,cash:5000,wealth:5,happy:0,honor:0,bankrupt:(np.bankrupt||0)+1,pocket:{chance:[],exp:[]}};} else np.wealth=Math.floor(np.cash/1000); return np;}
 function titleBoost(p,ctx){const t=(p.titles||[]).find(x=>x.id===p.activeTitleId); if(!t||!t.boost)return {}; if((t.boost.career&&t.boost.career===ctx.career)||(t.boost.type&&t.boost.type===ctx.type))return {cash:t.boost.cash||0,happy:t.boost.happy||0,honor:t.boost.honor||0}; return {};}
 function checkWin(p){return p.wealth>=p.target.wealth&&p.happy>=p.target.happy&&p.honor>=p.target.honor;}
 function cellClass(type){return 'cell '+(type==='chance'?'chance':type==='careerEntry'?'entry':type==='start'?'start':type==='retire'?'retire':'');}
@@ -97,7 +129,7 @@ function App(){
   const [stage,setStage]=useState('setup');
   const [players,setPlayers]=useState([mkPlayer(0)]);
   const [current,setCurrent]=useState(0);
-  const [log,setLog]=useState(['歡迎來到幸福人 Classic V2.5']);
+  const [log,setLog]=useState(['歡迎來到幸福人 Classic V2.6']);
   const [dice,setDice]=useState([]);
   const [moving,setMoving]=useState(false);
   const [event,setEvent]=useState(null);
@@ -106,51 +138,53 @@ function App(){
   const [music,setMusic]=useState(false);
   const audioRef=useRef(null);
   const cp=players[current];
+  const playersRef=useRef(players);
+  useEffect(()=>{playersRef.current=players;},[players]);
   useEffect(()=>{const a=audioRef.current;if(!a)return; a.loop=true; if(music)a.play().catch(()=>{}); else a.pause();},[music]);
-  useEffect(()=>{try{localStorage.setItem('hpc-v25-save',JSON.stringify({stage,players,current,log}))}catch{}},[stage,players,current,log]);
+  useEffect(()=>{try{localStorage.setItem('hpc-v26-save',JSON.stringify({stage,players,current,log}))}catch{}},[stage,players,current,log]);
   const addLog = m => setLog(l=>[m,...l].slice(0,12));
   const updatePlayer = (idx,fn) => setPlayers(ps=>ps.map((p,i)=>i===idx?fn(p):p));
   const showEvent = (title,text,after=null) => setEvent({title,text,after});
   const nextTurn = () => setCurrent(c=>(c+1)%players.length);
   const confirmEvent = () => {const a=event?.after; setEvent(null); if(a==='end')return; if(a==='next')nextTurn();};
   const setCount = n => setPlayers(ps=>Array.from({length:n},(_,i)=>ps[i]||mkPlayer(i)));
-  const reset = () => {localStorage.removeItem('hpc-v25-save'); setStage('setup'); setPlayers([mkPlayer(0)]); setCurrent(0); setLog(['歡迎來到幸福人 Classic V2.5']); setDice([]); setPrompt(null); setEvent(null); setWinner(null);};
-  const startGame = () => {setStage('game'); addLog('遊戲開始。每位玩家開局獲得 $10,000。');};
-  function applyAndCheck(idx,delta,ctx={}){let gotWin=false, bank=false; setPlayers(ps=>ps.map((p,i)=>{if(i!==idx)return p; const b=titleBoost(p,ctx); const np=applyDelta(p,{...delta,cash:(delta.cash||0)+(b.cash||0),happy:(delta.happy||0)+(b.happy||0),honor:(delta.honor||0)+(b.honor||0)}); if(np.bankrupt>(p.bankrupt||0))bank=true; if(checkWin(np)){gotWin=true; setWinner(np); setStage('end');} return np;})); if(bank)addLog(`${players[idx].name} 現金歸零，自動宣告破產並重領 $10,000。`); if(gotWin)addLog(`${players[idx].name} 達成幸福目標，遊戲結束。`);}
+  const reset = () => {localStorage.removeItem('hpc-v26-save'); setStage('setup'); setPlayers([mkPlayer(0)]); setCurrent(0); setLog(['歡迎來到幸福人 Classic V2.6']); setDice([]); setPrompt(null); setEvent(null); setWinner(null);};
+  const startGame = () => {setStage('game'); addLog('遊戲開始。每位玩家開局獲得 $5,000，幸福目標總和為 100。');};
+  function applyAndCheck(idx,delta,ctx={}){let gotWin=false, bank=false; setPlayers(ps=>ps.map((p,i)=>{if(i!==idx)return p; const b=titleBoost(p,ctx); const np=applyDelta(p,{...delta,cash:(delta.cash||0)+(b.cash||0),happy:(delta.happy||0)+(b.happy||0),honor:(delta.honor||0)+(b.honor||0)}); if(np.bankrupt>(p.bankrupt||0))bank=true; if(checkWin(np)){gotWin=true; setWinner(np); setStage('end');} return np;})); if(bank)addLog(`${players[idx].name} 現金歸零，自動宣告破產並重領 $5,000。`); if(gotWin)addLog(`${players[idx].name} 達成幸福目標，遊戲結束。`);}
   async function animateMove(steps){setMoving(true); for(let s=0;s<steps;s++){await sleep(280); updatePlayer(current,p=>{ if(p.route==='outer'){const next=(p.pos+1)%outerBoard.length; if(next===0){addLog(`${p.name} 經過發薪日，領取薪水 $${p.salary}。`); return applyDelta({...p,pos:next},{cash:p.salary});} return {...p,pos:next}; } const len=careerBoards[p.career].length; return {...p,careerPos:Math.min(p.careerPos+1,len-1)}; });} await sleep(120); setMoving(false);}
   async function moveAndResolve(steps){await animateMove(steps); setTimeout(()=>resolveLanding(),80);}
   function doRoll(){if(moving||event||prompt)return; const ds=roll(cp.route==='outer'?2:1); setDice(ds); addLog(`${displayName(cp)} 擲出 ${total(ds)} 點。`); moveAndResolve(total(ds));}
   function useExp(i){const card=cp.pocket.exp[i]; if(!card)return; updatePlayer(current,p=>({...p,pocket:{...p.pocket,exp:p.pocket.exp.filter((_,idx)=>idx!==i)}})); setPrompt(null); setDice([card.steps]); addLog(`${displayName(cp)} 使用「${card.title}」，前進 ${card.steps} 格。`); moveAndResolve(card.steps);}
-  function resolveLanding(){const p=players[current]; if(!p)return; if(p.route==='career'){const cell=careerBoards[p.career][p.careerPos]; if(cell.type==='careerExit'){completeCareer(p.career);return;} if(cell.type==='chance'){drawChance();return;} const ev=pick(careerEvents[p.career]); applyAndCheck(current,ev[2],{career:p.career}); addLog(`${displayName(p)} 在「${p.career}」內圈遇到：${ev[0]}。`); showEvent(`${META[p.career].icon} ${p.career}事件：${ev[0]}`,`${ev[1]}${Object.keys(titleBoost(p,{career:p.career})).length?'\n\n目前頭銜觸發了額外加成。':''}`,'next'); return;}
+  function resolveLanding(){const p=playersRef.current[current]; if(!p)return; if(p.route==='career'){const cell=careerBoards[p.career][p.careerPos]; if(cell.type==='careerExit'){completeCareer(p.career);return;} if(cell.type==='chance'){drawChance();return;} const ev=pick(careerEvents[p.career]); applyAndCheck(current,ev[2],{career:p.career}); addLog(`${displayName(p)} 在「${p.career}」內圈遇到：${ev[0]}。`); showEvent(`${META[p.career].icon} ${p.career}事件：${ev[0]}`,`${ev[1]}${Object.keys(titleBoost(p,{career:p.career})).length?'\n\n目前頭銜觸發了額外加成。':''}`,'next'); return;}
     const cell=outerBoard[p.pos]; if(cell.type==='careerEntry'){setPrompt({type:'careerEntry',career:cell.career});return;} if(cell.type==='chance'){drawChance();return;} if(cell.type==='retire'){setPrompt({type:'retire'});return;} let delta={}; let title='平凡的一天', text='沒有特別的事情發生。';
-    if(cell.type==='salary'){delta={salary:1000}; title='加薪機會'; text='薪水 +$1000。'}
-    if(cell.type==='money'){delta={cash:2000}; title=cell.label; text='現金 +$2000。'}
+    if(cell.type==='salary'){delta={salary:1000}; title='加薪機會'; text='加薪 1000。'}
+    if(cell.type==='money'){delta={cash:1000}; title=cell.label; text='獲得一筆小額收入，現金 +$1000。'}
     if(cell.type==='happy'||cell.type==='social'){delta={happy:2}; title=cell.label; text='快樂 +2。'}
     if(cell.type==='honor'){delta={honor:2}; title=cell.label; text='名譽 +2。'}
     applyAndCheck(current,delta,{type:cell.type==='money'?'money':cell.type}); addLog(`${displayName(p)} 抵達「${cell.label}」。`); showEvent(title,text,'next');
   }
   function drawChance(){const card=pick(chanceDeck); if(card.instant){applyAndCheck(current,card.instant,{type:'chance'}); addLog(`${displayName(cp)} 抽到機會卡「${card.title}」，立即生效。`); showEvent(`機會卡：${card.title}`,card.text,'next');} else {updatePlayer(current,p=>({...p,pocket:{...p.pocket,chance:[...p.pocket.chance,card]}})); addLog(`${displayName(cp)} 獲得機會卡「${card.title}」。`); showEvent(`獲得機會卡：${card.title}`,`${card.text}\n\n這張卡已放入人生口袋，可在你的回合使用或出售。`,'next');}}
-  function enterCareer(career){const fee=(cp.careerExp[career]||0)>0?0:META[career].fee; applyAndCheck(current,{cash:-fee}); updatePlayer(current,p=>({...p,route:'career',career,careerPos:0})); setPrompt(null); addLog(`${displayName(cp)} 進入「${career}」職業道路${fee?'，支付入門費 $'+fee:'，因已有經驗免入門費'}。`); showEvent(`${META[career].icon} 進入${career}內圈`,`接下來改用單骰前進。走完出口後可獲得經驗卡，並選擇一項人生成就。`,'next');}
-  function completeCareer(career){const exp=pick(expDeck); const completedBefore=cp.careerExp[career]||0; const nextTier=Math.min(completedBefore+1,3); updatePlayer(current,p=>({...p,route:'outer',career:null,careerPos:0,pos:outerBoard.findIndex(c=>c.career===career),careerExp:{...p.careerExp,[career]:(p.careerExp[career]||0)+1},pocket:{...p.pocket,exp:[...p.pocket.exp,exp]},retirementRights:(p.careerExp[career]||0)+1>=3?p.retirementRights+1:p.retirementRights})); addLog(`${displayName(cp)} 第 ${nextTier} 次完成「${career}」職業道路，返回外圈。`); setPrompt({type:'achievement',career,tier:nextTier});}
+  function enterCareer(career){const p0=playersRef.current[current]; const actualCareer=career; const fee=(p0.careerExp?.[actualCareer]||0)>0?0:META[actualCareer].fee; setPrompt(null); if(fee>0 && p0.cash-fee<=0){applyAndCheck(current,{cash:-fee}); showEvent('入門費不足','現金不足以支付入門費，已依規則宣告破產。','next'); return;} updatePlayer(current,p=>applyDelta({...p,route:'career',career:actualCareer,careerPos:0},{cash:-fee})); addLog(`${displayName(p0)} 進入「${actualCareer}」職業道路${fee?'，支付入門費 $'+fee:'，因已有經驗免入門費'}。`); showEvent(`${META[actualCareer].icon} 進入${actualCareer}內圈`,`接下來改用單骰前進。走完出口後可獲得經驗卡，並選擇一項人生成就。`,'next');}
+  function completeCareer(career){const p0=playersRef.current[current]; const exitCareer=career||p0?.career; if(!exitCareer)return; const exp=pick(expDeck); const completedBefore=p0.careerExp?.[exitCareer]||0; const nextTier=Math.min(completedBefore+1,3); updatePlayer(current,p=>({...p,route:'outer',career:null,careerPos:0,pos:outerBoard.findIndex(c=>c.career===exitCareer),careerExp:{...p.careerExp,[exitCareer]:(p.careerExp[exitCareer]||0)+1},pocket:{...p.pocket,exp:[...p.pocket.exp,exp]},retirementRights:(p.careerExp[exitCareer]||0)+1>=3?p.retirementRights+1:p.retirementRights})); addLog(`${displayName(p0)} 第 ${nextTier} 次完成「${exitCareer}」職業道路，返回外圈。`); setPrompt({type:'achievement',career:exitCareer,tier:nextTier});}
   function chooseAchievement(item){const id=randId(); updatePlayer(current,p=>applyDelta({...p,titles:[...p.titles,{...item,id}],activeTitleId:id},item.delta)); setPrompt(null); addLog(`${displayName(cp)} 選擇成就「${item.label}」，揭曉為「${item.rarity}」頭銜「${item.title}」。`); showEvent('人生里程碑揭曉',`你獲得成就：${item.label}
 頭銜：${item.title}
 稀有度：${item.rarity} ${rarityStars(item.rarity)}
 階級：${TIER_INFO[item.tier].name}
-效果：${item.desc}
-${deltaText(item.delta)}`,'next');}
+人生效果：${item.desc}
+實際記錄變化：${deltaText(item.delta)}`,'next');}
   function inspectCard(type,i){const card=type==='exp'?cp.pocket.exp[i]:cp.pocket.chance[i]; setPrompt({type:'cardInfo',cardType:type,cardIndex:i,card});}
   function inspectTitle(id){const title=cp.titles.find(t=>t.id===id); if(title)setPrompt({type:'titleInfo',title});}
-  function useChance(i,career=null){const card=cp.pocket.chance[i]; if(!card)return; if(card.kind==='gotoCareer'&&!career)return setPrompt({type:'chooseCareer',cardIndex:i}); if(card.kind==='experiencedCareer'&&!career)return setPrompt({type:'chooseExperiencedCareer',cardIndex:i}); updatePlayer(current,p=>({...p,pos:outerBoard.findIndex(c=>c.career===career),pocket:{...p.pocket,chance:p.pocket.chance.filter((_,idx)=>idx!==i)}})); setPrompt(null); addLog(`${displayName(cp)} 使用機會卡前往「${career}入口」。`); setPrompt({type:'careerEntry',career});}
+  function useChance(i,career=null){const p0=playersRef.current[current]; const card=p0?.pocket.chance[i]; if(!card)return; if(card.kind==='gotoCareer'&&!career)return setPrompt({type:'chooseCareer',cardIndex:i}); if(card.kind==='experiencedCareer'&&!career)return setPrompt({type:'chooseExperiencedCareer',cardIndex:i}); const targetIndex=outerBoard.findIndex(c=>c.type==='careerEntry'&&c.career===career); updatePlayer(current,p=>({...p,route:'outer',career:null,careerPos:0,pos:targetIndex,pocket:{...p.pocket,chance:p.pocket.chance.filter((_,idx)=>idx!==i)}})); setPrompt({type:'careerEntry',career}); addLog(`${displayName(p0)} 使用機會卡前往「${career}入口」。`);}
   function sellChance(i){const card=cp.pocket.chance[i]; setPrompt({type:'confirmSell',cardIndex:i,card});}
   function confirmSell(i){const card=cp.pocket.chance[i]; updatePlayer(current,p=>applyDelta({...p,pocket:{...p.pocket,chance:p.pocket.chance.filter((_,idx)=>idx!==i)}},{cash:card.sell||1000})); setPrompt(null); addLog(`${displayName(cp)} 出售「${card.title}」，獲得 $${card.sell||1000}。`);}
   function equipTitle(id){updatePlayer(current,p=>({...p,activeTitleId:id}));}
   function clearTitle(){updatePlayer(current,p=>({...p,activeTitleId:null}));}
-  function declareBankrupt(){updatePlayer(current,p=>({...p,cash:10000,wealth:10,happy:0,honor:0,pocket:{chance:[],exp:[]},bankrupt:(p.bankrupt||0)+1})); addLog(`${displayName(cp)} 宣告破產，重領 $10,000。`); nextTurn();}
+  function declareBankrupt(){updatePlayer(current,p=>({...p,cash:5000,wealth:5,happy:0,honor:0,pocket:{chance:[],exp:[]},bankrupt:(p.bankrupt||0)+1})); addLog(`${displayName(cp)} 宣告破產，重領 $5,000。`); nextTurn();}
   function retireVacation(){if(cp.retirementRights<=0){showEvent('無法使用退休權','目前尚未取得退休權。完成同一職業三次可取得退休權。');return;} updatePlayer(current,p=>applyDelta({...p,retirementRights:p.retirementRights-1,pos:21},{happy:6,cash:p.salary})); setPrompt(null); addLog(`${displayName(cp)} 使用退休權前往日月潭渡假。`); showEvent('日月潭渡假','快樂 +6，並領取一次薪水。','next');}
-  return <div className="app"><audio ref={audioRef} src="/bgm.wav"/><header><h1>幸福人 Classic <span>2.5 頭銜進階版</span></h1><div><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={reset}>重新開始</button></div></header>{stage==='setup'&&<Setup players={players} setCount={setCount} updatePlayer={updatePlayer} startGame={startGame}/>} {stage==='game'&&<><Recent log={log}/><Board players={players} cp={cp} dice={dice} moving={moving} prompt={prompt} event={event} doRoll={doRoll} useExp={useExp} useChance={useChance} sellChance={sellChance} equipTitle={equipTitle} clearTitle={clearTitle} declareBankrupt={declareBankrupt} retireVacation={retireVacation} inspectCard={inspectCard} inspectTitle={inspectTitle}/><Players players={players} current={current}/></>} {stage==='end'&&<End winner={winner} players={players} reset={reset}/>} {prompt&&<Prompt prompt={prompt} cp={cp} enterCareer={enterCareer} setPrompt={setPrompt} nextTurn={nextTurn} useChance={useChance} retireVacation={retireVacation} confirmSell={confirmSell} chooseAchievement={chooseAchievement} useExp={useExp} equipTitle={equipTitle} clearTitle={clearTitle} sellChance={sellChance}/>} {event&&<EventModal event={event} confirm={confirmEvent}/>}</div>;
+  return <div className="app"><audio ref={audioRef} src="/bgm.wav"/><header><h1>幸福人 Classic <span>2.6 平衡修正版</span></h1><div><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={reset}>重新開始</button></div></header>{stage==='setup'&&<Setup players={players} setCount={setCount} updatePlayer={updatePlayer} startGame={startGame}/>} {stage==='game'&&<><Recent log={log}/><Board players={players} cp={cp} dice={dice} moving={moving} prompt={prompt} event={event} doRoll={doRoll} useExp={useExp} useChance={useChance} sellChance={sellChance} equipTitle={equipTitle} clearTitle={clearTitle} declareBankrupt={declareBankrupt} retireVacation={retireVacation} inspectCard={inspectCard} inspectTitle={inspectTitle}/><Players players={players} current={current}/></>} {stage==='end'&&<End winner={winner} players={players} reset={reset}/>} {prompt&&<Prompt prompt={prompt} cp={cp} enterCareer={enterCareer} setPrompt={setPrompt} nextTurn={nextTurn} useChance={useChance} retireVacation={retireVacation} confirmSell={confirmSell} chooseAchievement={chooseAchievement} useExp={useExp} equipTitle={equipTitle} clearTitle={clearTitle} sellChance={sellChance}/>} {event&&<EventModal event={event} confirm={confirmEvent}/>}</div>;
 }
 function Setup({players,setCount,updatePlayer,startGame}){return <div className="setup card"><h2>建立玩家</h2><label>玩家人數 <select value={players.length} onChange={e=>setCount(+e.target.value)}>{[1,2,3,4,5,6].map(n=><option key={n}>{n}</option>)}</select></label><div className="setupGrid">{players.map((p,i)=><div className="playerSetup" key={p.id}><input value={p.name} onChange={e=>updatePlayer(i,p=>({...p,name:e.target.value}))}/><div className="animals">{ANIMALS.map(a=><button key={a} className={p.animal===a?'sel':''} onClick={()=>updatePlayer(i,p=>({...p,animal:a}))}>{a}</button>)}</div><Target p={p} update={t=>updatePlayer(i,p=>({...p,target:t}))}/><button onClick={()=>updatePlayer(i,p=>({...p,targetLocked:!p.targetLocked}))}>{p.targetLocked?'已鎖定目標':'鎖定幸福目標'}</button></div>)}</div><button className="primary" onClick={startGame}>開始遊戲</button></div>}
-function Target({p,update}){const t=p.target.wealth+p.target.happy+p.target.honor; const set=(k,v)=>update({...p.target,[k]:+v}); return <div className="target"><b>幸福目標：{t}/60</b><label>財富 <input disabled={p.targetLocked} type="number" value={p.target.wealth} onChange={e=>set('wealth',e.target.value)}/></label><label>快樂 <input disabled={p.targetLocked} type="number" value={p.target.happy} onChange={e=>set('happy',e.target.value)}/></label><label>名譽 <input disabled={p.targetLocked} type="number" value={p.target.honor} onChange={e=>set('honor',e.target.value)}/></label></div>}
+function Target({p,update}){const t=p.target.wealth+p.target.happy+p.target.honor; const set=(k,v)=>update({...p.target,[k]:+v}); return <div className="target"><b>幸福目標：{t}/100</b><label>財富 <input disabled={p.targetLocked} type="number" value={p.target.wealth} onChange={e=>set('wealth',e.target.value)}/></label><label>快樂 <input disabled={p.targetLocked} type="number" value={p.target.happy} onChange={e=>set('happy',e.target.value)}/></label><label>名譽 <input disabled={p.targetLocked} type="number" value={p.target.honor} onChange={e=>set('honor',e.target.value)}/></label></div>}
 function Recent({log}){return <div className="recent"><b>最近紀錄</b>{log.map((l,i)=><p key={i}>{l}</p>)}</div>}
 function Board(props){const {players,cp}=props;return <div className="outerBoard">{outerBoard.map((cell,i)=><div key={i} className={cellClass(cell.type)+(cp.route==='outer'&&cp.pos===i?' currentCell':'')} style={{gridColumn:coords[i][1]+1,gridRow:coords[i][0]+1}}><small>{i}</small><b>{cell.label}</b><div className="tokens">{players.filter(p=>p.route==='outer'&&p.pos===i).map(p=><span key={p.id}>{p.animal}</span>)}</div></div>)}<div className="centerStage"><ControlPanel {...props}/><Wallet {...props}/></div></div>}
 function ControlPanel({cp,dice,moving,prompt,event,doRoll,retireVacation,declareBankrupt}){return <section className="control card"><h2>目前回合：{cp.animal} {displayName(cp)}</h2><div className="bigDice">{dice.length?dice.map((d,i)=><span key={i}>{diceFace(d)}</span>):'等待擲骰'}</div><p className="mode">{cp.route==='outer'?'外圈：雙骰':'內圈：單骰'}{moving?'｜逐格移動中':''}</p>{cp.route==='career'&&<CareerStage player={cp}/>}<div className="actions"><button className="primary" disabled={moving||prompt||event} onClick={doRoll}>擲骰前進</button><button onClick={retireVacation}>使用退休權去度假</button><button onClick={declareBankrupt}>宣告破產</button></div></section>}
