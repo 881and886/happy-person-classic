@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.8 職業完成與音效沉浸版";
+const VERSION = "V2.81 頭銜切換與人生結局版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -490,31 +490,50 @@ function App(){
 
   function generateAutobiography(p, reason){
     const id=uid();
+    const important = p.lifeLog.filter(x=>x.important);
     const grouped={};
-    for(const item of p.lifeLog.filter(x=>x.important)){
+    for(const item of important){
       const st=stageOf(item.ageMonths);
       grouped[st]=grouped[st]||[];
       grouped[st].push(item);
     }
     const finalWealth=clampWealthCash(p.cash);
     const tendency=p.trait==="wealth"?"財富導向":p.trait==="happiness"?"快樂導向":p.trait==="reputation"?"名譽導向":"平衡導向";
+    const mainCareer = Object.entries(p.careerCounts||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "人生";
+    const finalTitle = p.titles.find(t=>t.id===p.equippedTitleId)?.title || "無名旅人";
+    const hasBankrupt = p.lifeLog.some(x=>x.type==="bankrupt");
+    const familyCount = p.lifeLog.filter(x=>x.type==="家庭").length;
+    const titleCount = p.titles.length;
     const lines=[];
     lines.push(`《${displayName(p)}的一生》`);
     lines.push(`人生自傳編號：${id}`);
     lines.push(`生成版本：幸福人 Classic ${VERSION}`);
     lines.push(`生成時間：${new Date().toLocaleString()}`);
     lines.push("");
-    lines.push(`18歲時，${p.name}帶著${money(STARTING_CASH)}踏上人生道路。那時的幸福目標是：財富${p.target.wealth}、快樂${p.target.happiness}、名譽${p.target.reputation}，呈現出「${tendency}」的人生特質。`);
+    lines.push(`18歲那年，${p.name}帶著${money(STARTING_CASH)}踏上人生道路。那時的他，替自己設定了三個幸福目標：財富${p.target.wealth}、快樂${p.target.happiness}、名譽${p.target.reputation}。從這些選擇裡，可以看見他偏向「${tendency}」的人生氣質。`);
+    lines.push(`他並不知道未來會遇見多少機會，也不知道有些路走進去之後會改變自己，有些路則會在略過之後成為多年後想起的風景。`);
     lines.push("");
     const order=["🌱 弱冠之年","🔥 而立之年","🌊 不惑之年","🍂 知天命","🌙 耳順之年","☀ 古稀之年","🌌 杖朝之年","📖 期頤之年"];
     for(const st of order){
-      if(!grouped[st]) continue;
+      const events=(grouped[st]||[]).slice(0,10);
+      if(!events.length) continue;
       lines.push(`【${st}】`);
-      grouped[st].slice(0,8).forEach(e=>lines.push(`${ageText(e.ageMonths)}，${e.title}。${e.desc}`));
+      const lead = st.includes("弱冠") ? "人生剛開始時，每一次選擇都像在替未來埋下伏筆。" : st.includes("而立") ? "到了而立之年，他開始看見自己選擇的方向，也開始承擔選擇帶來的重量。" : st.includes("不惑") ? "不惑之年並不代表沒有疑惑，而是開始懂得與疑惑同行。" : st.includes("知天命") ? "知天命之後，他逐漸明白，有些收穫來自努力，有些安排則來自人生本身。" : st.includes("耳順") ? "耳順之年，他對世界的聲音少了抵抗，多了一點理解。" : "人生走到後段，許多曾經重要的事，都慢慢化為可以回望的故事。";
+      lines.push(lead);
+      events.forEach(e=>{
+        lines.push(`${ageText(e.ageMonths)}，${e.title}。${e.desc}`);
+      });
       lines.push("");
     }
-    lines.push(`最終人生：財富${finalWealth}、快樂${p.happiness}、名譽${p.reputation}。`);
-    lines.push(`結局：${reason}。`);
+    lines.push(`回望這一生，${p.name}最常走近的是「${mainCareer}」這條道路；他一共取得了${titleCount}個人生頭銜，而最後掛在名字上的，是「${finalTitle}」。`);
+    if(hasBankrupt) lines.push(`他也曾經歷金錢歸零的低谷。那不是人生的結束，而是讓他重新理解「失去」與「重新開始」的時刻。`);
+    if(familyCount>0) lines.push(`在許多家庭事件裡，他被提醒：人生不只由成就構成，也由那些日常裡的牽掛、支持、衝突與陪伴所組成。`);
+    lines.push(`最終，他的人生停在${ageText(p.ageMonths)}。結局的理由是：${reason}。此時他的財富為${finalWealth}，快樂為${p.happiness}，名譽為${p.reputation}。`);
+    lines.push("");
+    lines.push(`沒有人可以替另一個人的人生評級。${p.name}的一生也許有成功，也許有遺憾；也許有些路走得很深，有些路只是曾經路過。但正因為那些選擇、錯過與堅持，才使這段人生只屬於他自己。`);
+    lines.push("");
+    const motto = p.trait==="wealth" ? "人生箴言：真正重要的，往往不是最後擁有多少，而是你願意把擁有的東西，留給誰、用在哪裡。" : p.trait==="happiness" ? "人生箴言：幸福並不遙遠，它常常藏在那些平凡、細小，卻願意被珍惜的日子裡。" : p.trait==="reputation" ? "人生箴言：人終將老去，但曾經留下的影響，會在他人的記憶裡繼續前行。" : "人生箴言：人生不是單一答案，而是在有限歲月裡，學會讓不同的渴望彼此安放。";
+    lines.push(motto);
     lines.push("");
     lines.push("本自傳由《幸福人 Classic》人生自傳系統生成。敘事模板、事件文本、系統設計與遊戲內容為原創智慧財產；未經授權不得重製、改作或商業使用。");
     return lines.join("\n");
@@ -527,14 +546,48 @@ function App(){
   }
 
   function titleInfo(t){
-    setModal({title:`頭銜資訊｜${t.title}`, desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n來源：${t.career}\n${t.salaryRaise?`加薪 ${t.salaryRaise}`:""}\n${t.effects?.length?`效果：${t.effects.join('、')}`:""}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}`});
+    const equipped = current?.equippedTitleId === t.id;
+    setModal({
+      title:`頭銜資訊｜${t.title}`,
+      desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n稀有度：${t.rarity || (t.tier===1?'普通':t.tier===2?'稀有':'傳奇')}\n來源：${t.career || '人生事件'}\n${t.salaryRaise?`實際效果：加薪 ${t.salaryRaise}`:"實際效果：依事件觸發而定"}\n${t.effects?.length?`加成：${t.effects.join('、')}`:"加成：無明顯加成"}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}\n\n${equipped?'目前裝備中。':'你可以將此頭銜裝備為目前的人生身份。'}`,
+      actions: equipped
+        ? [{label:"確認", onClick:()=>setModal(null)}]
+        : [
+            {label:"裝備此頭銜", onClick:()=>equipTitle(t.id)},
+            {label:"先不切換", onClick:()=>setModal(null)}
+          ]
+    });
+  }
+
+  function equipTitle(titleId){
+    updateCurrent(p=>({...p, equippedTitleId:titleId, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:"切換人生頭銜",desc:"他重新選擇了此刻想被世界看見的身份。",type:"title",important:false}]}));
+    const t=current?.titles.find(x=>x.id===titleId);
+    addLog(`${current?.animal || ''} ${current?.name || ''} 裝備頭銜：${t?.title || '新頭銜'}`);
+    setModal(null);
+  }
+
+  function showSupportModal(){
+    setModal({
+      title:"🌱 支持幸福人計畫",
+      desc:"如果你喜歡這段人生旅程，歡迎贊助 100 元支持《幸福人》的持續開發。你的支持，將成為更多人生故事誕生的力量。",
+      custom:<div className="supportModal"><img src="/support_qr.jpg" onError={e=>{e.currentTarget.style.display='none'}}/><p>贊助 100元支持幸福人開發</p></div>,
+      actions:[{label:"謝謝，我知道了", onClick:()=>setModal(null)}]
+    });
+  }
+
+  function showFeedbackModal(){
+    setModal({
+      title:"✉ 回饋作者",
+      desc:"謝謝你願意回饋《幸福人》。目前可先透過你取得遊戲的管道，把建議、截圖或測試心得傳給作者。未來版本可再接正式表單或信箱。",
+      actions:[{label:"確認", onClick:()=>setModal(null)}]
+    });
   }
 
   if(screen==="setup") return <div className="app setup"><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="setupPanel"><label>玩家人數 <select value={playerCount} onChange={e=>setPlayerCount(Number(e.target.value))}>{[1,2,3,4,5,6].map(n=><option key={n}>{n}</option>)}</select></label>{setupPlayers.map((p,i)=>{const sum=targetSum(p.target); return <div className="setupCard" key={i}><div className="row"><input value={p.name} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><select value={p.animal} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,animal:e.target.value}:x))}>{animals.map(a=><option key={a}>{a}</option>)}</select></div><div className="targetGrid">{[["wealth","財富"],["happiness","快樂"],["reputation","名譽"]].map(([k,label])=><label key={k}>{label}<input type="range" min="0" max="100" value={p.target[k]} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,target:{...x.target,[k]:Number(e.target.value)}}:x))}/><input type="number" min="0" max="100" value={p.target[k]} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,target:{...x.target,[k]:Number(e.target.value)}}:x))}/></label>)}</div><div className={sum===100?"ok hint":"bad hint"}>目標總和：{sum}／100　{sum<100?`尚缺 ${100-sum}`:sum>100?`超出 ${sum-100}`:"可以開始"}</div></div>})}<button className="primary" onClick={startGame}>開始人生</button></div>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 
-  if(screen==="autobiography") return <div className="app"><h1>人生自傳</h1><pre className="autobio">{autobiography}</pre><div className="row"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={()=>setScreen("game")}>返回遊戲</button></div></div>;
+  if(screen==="autobiography") return <div className="app endingPage"><h1>📖 人生結局</h1><pre className="autobio">{autobiography}</pre><div className="endingActions"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={showSupportModal}>💖 贊助支持</button><button onClick={showFeedbackModal}>✉ 回饋作者</button><button onClick={()=>setScreen("game")}>返回遊戲</button></div><section className="supportPanel"><div><h2>🌱 支持幸福人計畫</h2><p>如果你喜歡這段人生旅程，歡迎贊助 100 元支持《幸福人》的持續開發。</p><p>你的支持，將成為更多人生故事誕生的力量。</p></div><img src="/support_qr.jpg" onError={e=>{e.currentTarget.style.display='none'}} alt="支持幸福人 QR Code"/></section>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 
-  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${careerBoards[current.career].length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.title}</button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${careerBoards[p.career].length}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="cornerPanel cornerTop"><b>人生歲月</b><span>{current&&stageOf(current.ageMonths)}</span><small>{current&&ageText(current.ageMonths)}</small></div><div className="cornerPanel cornerBottom"><b>人生記事</b>{logs.slice(0,2).map((l,i)=><small key={i}>{l}</small>)}</div><div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${careerBoards[current.career].length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} title="點擊查看頭銜屬性或裝備" className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.id===current.equippedTitleId?'✓ ':''}{t.title}<small>{t.tier===1?'初階':t.tier===2?'二階':'傳奇'}</small></button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${careerBoards[p.career].length}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 }
 
 function CoinRain(){
