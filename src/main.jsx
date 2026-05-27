@@ -3,11 +3,15 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.7.1 人生歲月修正版";
+const VERSION = "V2.8 職業完成與音效沉浸版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
 const TARGET_TOTAL = 100;
+const SUPPORTER_CODE = "HAPPY-COIN-2026";
+const COIN_SOUND = "/sounds/coin.mp3";
+const CAREER_BGM = "/sounds/career.mp3";
+const MAIN_BGM = "/bgm.wav";
 
 const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"];
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
@@ -223,7 +227,7 @@ function createPlayer(name, animal, target){
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36), name, animal,
     cash: STARTING_CASH, salary: 1000, happiness: 0, reputation: 0, ageMonths: START_AGE_MONTHS,
-    target, trait: maxKey, outerPos: 0, career: null, careerPos: 0, titles: [], equippedTitleId: null,
+    target, trait: maxKey, outerPos: 0, career: null, careerPos: 0, careerProgress: 0, titles: [], equippedTitleId: null,
     careerCounts: Object.fromEntries(careers.map(c=>[c,0])), chanceCards: [], experienceCards: [], retired: false, bankrupt: false,
     lifeLog: [{ageMonths: START_AGE_MONTHS, title: "踏上人生道路", desc: `帶著${money(STARTING_CASH)}，開始追尋自己的幸福。`, type:"start", important:true}],
   };
@@ -270,15 +274,28 @@ function App(){
   const [gameOver,setGameOver]=useState(false);
   const [autobiography,setAutobiography]=useState("");
   const [music,setMusic]=useState(false);
-  const audioRef=useRef(null);
+  const [sfx,setSfx]=useState(true);
+  const [supporter,setSupporter]=useState(()=>localStorage.getItem("supporterMode")==="true");
+  const [supporterInput,setSupporterInput]=useState("");
+  const [showCoinRain,setShowCoinRain]=useState(false);
+  const mainAudioRef=useRef(null);
+  const careerAudioRef=useRef(null);
   const playersRef=useRef(players);
-
-  useEffect(()=>{ playersRef.current=players; },[players]);
-  useEffect(()=>{ const a=audioRef.current; if(!a) return; a.loop=true; if(music) a.play().catch(()=>{}); else a.pause(); },[music]);
 
   const current=players[turn];
   const boardTile = current ? outerBoard[current.outerPos] : null;
   const wealthScore = current ? clampWealthCash(current.cash) : 0;
+
+  useEffect(()=>{ playersRef.current=players; },[players]);
+  useEffect(()=>{
+    const main=mainAudioRef.current; const career=careerAudioRef.current;
+    if(!main || !career) return;
+    main.loop=true; career.loop=true;
+    const inCareer=!!current?.career;
+    if(!music){ main.pause(); career.pause(); return; }
+    if(inCareer){ main.pause(); career.play().catch(()=>{}); }
+    else { career.pause(); main.play().catch(()=>{}); }
+  },[music, current?.career]);
 
   useEffect(()=>{
     setSetupPlayers(prev=>Array.from({length:playerCount},(_,i)=>prev[i]||{name:`玩家${i+1}`, animal:animals[i%animals.length], target:{wealth:34,happiness:33,reputation:33}}));
@@ -294,6 +311,28 @@ function App(){
     if(!canStart()){ setModal({title:"幸福目標尚未完成", desc:"每位玩家的財富、快樂、名譽目標總和必須剛好等於100。"}); return; }
     setPlayers(setupPlayers.map(p=>createPlayer(p.name.trim(), p.animal, p.target)));
     setScreen("game");
+  }
+
+  function unlockSupporter(){
+    if(supporterInput.trim() === SUPPORTER_CODE){
+      localStorage.setItem("supporterMode","true");
+      setSupporter(true);
+      setSupporterInput("");
+      setModal({title:"🌱 支持者模式已啟用", desc:"感謝你支持《幸福人》。發薪日將啟用金幣雨特效與音效。"});
+    }else{
+      setModal({title:"序號錯誤", desc:"請確認支持者序號是否輸入正確。"});
+    }
+  }
+
+  function triggerCoinRain(){
+    if(!supporter) return;
+    setShowCoinRain(true);
+    if(sfx){
+      const audio=new Audio(COIN_SOUND);
+      audio.volume=0.65;
+      audio.play().catch(()=>{});
+    }
+    setTimeout(()=>setShowCoinRain(false),1800);
   }
 
   async function rollDice(){
@@ -317,12 +356,14 @@ function App(){
         if(np.career){
           const len=careerBoards[np.career].length;
           np.careerPos=(np.careerPos+1)%len;
+          np.careerProgress=(np.careerProgress||0)+1;
         }else{
           const old=np.outerPos;
           np.outerPos=(np.outerPos+1)%outerBoard.length;
           if(np.outerPos < old || np.outerPos===0){
             np.cash += np.salary;
             np.lifeLog=[...np.lifeLog,{ageMonths:np.ageMonths,title:"經過發薪日",desc:`領取薪水${money(np.salary)}。`,type:"payday",important:false}];
+            setTimeout(()=>triggerCoinRain(), 80);
           }
         }
         return np;
@@ -338,8 +379,8 @@ function App(){
     if(!p) return;
     if(p.ageMonths >= MAX_AGE_MONTHS){ endByAge(p); return; }
     if(p.career){
-      const tile=careerBoards[p.career][p.careerPos];
-      if(tile.type==="careerExit") return completeCareer(p.career);
+      const len=careerBoards[p.career].length;
+      if((p.careerProgress||0) >= len) return completeCareer(p.career);
       const ev=eventByTrait(careerEvents[p.career] || [], p.trait);
       applyEvent(ev, p.career);
       return;
@@ -393,7 +434,7 @@ function App(){
     if(career==="從政" && p.reputation < -5){ allowed=false; reason="名譽過低，目前不適合從政。"; }
     if(p.cash - fee <= 0){ allowed=false; reason="現金不足，支付後將破產。"; }
     if(!allowed){ setModal({title:"無法進入", desc:reason, actions:[{label:"確認", onClick:()=>{setModal(null); nextTurn();}}]}); return; }
-    updateCurrent(p=>({...applyEffect(p,{cash:-fee}), career, careerPos:0, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:`進入${career}道路`,desc:`選擇投入${career}人生道路。`,type:"career",important:true}]}));
+    updateCurrent(p=>({...applyEffect(p,{cash:-fee}), career, careerPos:0, careerProgress:0, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:`進入${career}道路`,desc:`選擇投入${career}人生道路。`,type:"career",important:true}]}));
     addLog(`${displayName(p)} 進入 ${career} 道路`);
     setModal(null);
   }
@@ -417,7 +458,7 @@ function App(){
       np.careerCounts={...np.careerCounts,[career]:nextCount};
       np.titles=[...np.titles,title];
       np.equippedTitleId=title.id;
-      np.career=null; np.careerPos=0;
+      np.career=null; np.careerPos=0; np.careerProgress=0;
       np=applyEffect(np,{salaryRaise:a.salaryRaise,reputation:a.rep||0,happiness:a.happy||0});
       np.lifeLog=[...np.lifeLog,{ageMonths:np.ageMonths,title:`獲得頭銜：${a.title}`,desc:`${a.desc}${a.salaryRaise?` 並加薪 ${a.salaryRaise}。`:""}`,type:"title",important:true}];
       return np;
@@ -493,7 +534,12 @@ function App(){
 
   if(screen==="autobiography") return <div className="app"><h1>人生自傳</h1><pre className="autobio">{autobiography}</pre><div className="row"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={()=>setScreen("game")}>返回遊戲</button></div></div>;
 
-  return <div className="app"><audio ref={audioRef} src="/bgm.wav"/><header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.title}</button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${careerBoards[current.career].length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.title}</button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${careerBoards[p.career].length}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+}
+
+function CoinRain(){
+  const coins=useMemo(()=>Array.from({length:36},(_,i)=>({id:i,left:Math.random()*100,delay:Math.random()*0.6,duration:1.1+Math.random()*0.9,size:22+Math.random()*18,spin:Math.random()>0.5?1:-1})),[]);
+  return <div className="coinRain" aria-hidden="true"><div className="salaryToast">💰 發薪日！</div>{coins.map(c=><span key={c.id} style={{left:`${c.left}%`,animationDelay:`${c.delay}s`,animationDuration:`${c.duration}s`,fontSize:`${c.size}px`,['--spin']:c.spin}}>🪙</span>)}</div>
 }
 
 function Modal({modal,close}){ return <div className="modalBackdrop"><div className="modal"><h2>{modal.title}</h2>{modal.desc&&<p className="modalDesc">{modal.desc}</p>}{modal.custom}{modal.actions?<div className="modalActions">{modal.actions.map((a,i)=><button key={i} className={i===0?'primary':''} onClick={a.onClick}>{a.label}</button>)}</div>:<button className="primary" onClick={close}>確認</button>}</div></div> }
