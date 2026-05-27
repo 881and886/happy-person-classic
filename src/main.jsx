@@ -1,9 +1,9 @@
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.7 人生歲月核心版";
+const VERSION = "V2.7.1 人生歲月修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -47,7 +47,7 @@ const familyEvents = [
   { title: "家庭聚餐", desc: "家人圍坐一桌，你想起人生不只有工作。", cash: -500, happiness: 4, reputation: 0, important: true },
   { title: "家人支持", desc: "家人在低潮時給了你一句鼓勵。", cash: 0, happiness: 5, reputation: 0, important: true },
   { title: "長輩生病", desc: "你花時間陪伴與照顧長輩。", cash: -1000, happiness: -2, reputation: 2, important: true },
-  { title: "家庭衝突", desc: "價值觀不同帶來爭執，讓你感到疲憊。", cash: 0, happiness: -4, reputation: 0, important: false },
+  { title: "家庭衝突", desc: "價值觀不同帶來爭執，讓你感到疲憊。", cash: 0, happiness: -2, reputation: 0, important: false },
   { title: "孩子的笑聲", desc: "平凡的日常裡，你重新感受到生活的溫度。", cash: -500, happiness: 6, reputation: 0, important: true },
   { title: "伴侶的理解", desc: "有人理解你的選擇，讓你更堅定。", cash: 0, happiness: 4, reputation: 1, important: true },
   { title: "親友借錢", desc: "親友遇到困難向你開口，你選擇伸出援手。", cash: -1000, happiness: 1, reputation: 2, important: false },
@@ -65,35 +65,35 @@ const chanceEvents = [
 const careerEvents = {
   學院: [
     { title: "研究突破", desc: "你在研究中看見新的可能。", cash: 0, happiness: 2, reputation: 3, important: true },
-    { title: "升等壓力", desc: "漫長的審查讓你感到疲憊。", cash: 0, happiness: -3, reputation: 1 },
+    { title: "升等壓力", desc: "漫長的審查讓你感到疲憊。", cash: 0, happiness: -1, reputation: 1 },
   ],
   農墾: [
     { title: "豐收", desc: "土地回應了你的耐心。", cash: 1000, happiness: 4, reputation: 1, important: true },
-    { title: "天候不穩", desc: "風雨打亂了耕作節奏。", cash: -1000, happiness: -2, reputation: 0 },
+    { title: "天候不穩", desc: "風雨打亂了耕作節奏。", cash: -1000, happiness: -1, reputation: 0 },
   ],
   企業: [
     { title: "專案成功", desc: "你帶領團隊完成關鍵任務。", cash: 1000, happiness: 0, reputation: 2, important: true },
-    { title: "加班連夜", desc: "財務有成長，生活卻被工作占滿。", cash: 1000, happiness: -3, reputation: 1 },
+    { title: "加班連夜", desc: "財務有成長，生活卻被工作占滿。", cash: 1000, happiness: -1, reputation: 1 },
   ],
   航海: [
     { title: "遠洋貿易", desc: "你從遠方帶回新的見聞與收益。", cash: 1500, happiness: 1, reputation: 1, important: true },
-    { title: "海上風暴", desc: "風浪提醒你人生的不可預測。", cash: -1000, happiness: -2, reputation: 1 },
+    { title: "海上風暴", desc: "風浪提醒你人生的不可預測。", cash: -1000, happiness: -1, reputation: 1 },
   ],
   月球探險: [
     { title: "太空任務成功", desc: "你短暫離開地球，名聲傳回人間。", cash: 1000, happiness: 2, reputation: 5, important: true },
-    { title: "孤獨航程", desc: "偉大的冒險也伴隨難以言說的孤寂。", cash: 0, happiness: -4, reputation: 2 },
+    { title: "孤獨航程", desc: "偉大的冒險也伴隨難以言說的孤寂。", cash: 0, happiness: -2, reputation: 2 },
   ],
   電影明星: [
     { title: "新片上映", desc: "聚光燈照向你，觀眾記住了你的名字。", cash: 1000, happiness: 1, reputation: 4, important: true },
-    { title: "緋聞風波", desc: "名聲帶來掌聲，也帶來壓力。", cash: 0, happiness: -3, reputation: -2, important: true },
+    { title: "緋聞風波", desc: "名聲帶來掌聲，也帶來壓力。", cash: 0, happiness: -1, reputation: -2, important: true },
   ],
   從政: [
     { title: "政策獲得支持", desc: "你的理念開始影響更多人。", cash: 0, happiness: 1, reputation: 5, important: true },
-    { title: "輿論攻擊", desc: "站上舞台，也意味著承受批評。", cash: 0, happiness: -3, reputation: -3 },
+    { title: "輿論攻擊", desc: "站上舞台，也意味著承受批評。", cash: 0, happiness: -1, reputation: -3 },
   ],
   開礦: [
     { title: "挖到礦脈", desc: "地下的資源帶來可觀收益。", cash: 1500, happiness: 0, reputation: 1, important: true },
-    { title: "工安事故", desc: "高收益的背後，也有沉重代價。", cash: -1000, happiness: -3, reputation: -1, important: true },
+    { title: "工安事故", desc: "高收益的背後，也有沉重代價。", cash: -1000, happiness: -1, reputation: -1, important: true },
   ],
 };
 
@@ -140,6 +140,65 @@ const achievementPools = {
   ],
 };
 
+
+const achievementChoiceSeeds = {
+  學院:[
+    {title:"商學學位", suffix:"商學士", desc:"你開始理解市場與財務運作。", salaryRaise:700, rep:1, effects:["金錢事件略有加成"], risks:["研究與職涯壓力仍存在"]},
+    {title:"教育學位", prefix:"教師", desc:"你開始陪伴他人成長。", salaryRaise:500, happy:2, rep:1, effects:["學院事件較容易帶來名譽"], risks:["升等壓力仍會影響快樂"]},
+    {title:"科學學位", prefix:"研究員", desc:"你投入未知領域的探索。", salaryRaise:500, rep:2, effects:["月球探險相關事件略有加成"], risks:["研究壓力增加"]},
+  ],
+  農墾:[
+    {title:"有機農夫", suffix:"有機農夫", desc:"你開始享受平穩的土地節奏。", salaryRaise:300, happy:3, effects:["家庭事件快樂收益提升"], risks:[]},
+    {title:"農場主", suffix:"農場主", desc:"你把土地經營成安身立命之處。", salaryRaise:700, happy:1, effects:["農墾事件較穩定"], risks:["天候風險仍存在"]},
+    {title:"地方職人", prefix:"地方職人", desc:"你在地方逐漸被看見。", salaryRaise:400, rep:2, happy:1, effects:["地方事件加成"], risks:[]},
+  ],
+  企業:[
+    {title:"職員", suffix:"職員", desc:"你開始理解組織與市場的規則。", salaryRaise:500, effects:["企業事件現金收益略提升"], risks:["加班事件增加"]},
+    {title:"經理人", suffix:"經理人", desc:"你開始帶領團隊，也承擔更多壓力。", salaryRaise:900, rep:1, effects:["企業事件收益提升"], risks:["快樂損失可能增加"]},
+    {title:"創業家", prefix:"創業家", desc:"你踏上高風險的人生道路。", salaryRaise:600, happy:-1, effects:["投資與創業事件略有加成"], risks:["現金波動較大"]},
+  ],
+  航海:[
+    {title:"水手", suffix:"水手", desc:"你踏上離岸的旅程。", salaryRaise:400, happy:1, effects:["航海事件收益略提升"], risks:["風暴仍危險"]},
+    {title:"船長", prefix:"船長", desc:"你開始掌舵自己的方向。", salaryRaise:800, rep:1, effects:["航海風險略降低"], risks:[]},
+    {title:"國際商人", prefix:"國際商人", desc:"你建立跨地域人脈。", salaryRaise:900, rep:1, effects:["國際事件加成"], risks:["長期離家影響家庭"]},
+  ],
+  月球探險:[
+    {title:"太空研究員", suffix:"太空研究員", desc:"你開始仰望地球之外的遠方。", salaryRaise:500, rep:2, effects:["月球事件成功率略提升"], risks:["孤獨事件增加"]},
+    {title:"太空人", prefix:"太空人", desc:"你親身踏上未知領域。", salaryRaise:900, rep:3, effects:["月球稀有事件提升"], risks:["快樂波動較大"]},
+    {title:"月面先鋒", prefix:"月面先鋒", desc:"你把不可能變成了履歷。", salaryRaise:900, rep:2, happy:1, effects:["傳奇事件觸發率提升"], risks:["孤獨感加深"]},
+  ],
+  電影明星:[
+    {title:"演員", suffix:"演員", desc:"你開始站在鏡頭前。", salaryRaise:400, rep:2, effects:["娛樂事件名譽收益提升"], risks:["評價影響心情"]},
+    {title:"明星", prefix:"明星", desc:"聚光燈開始追著你走。", salaryRaise:800, rep:3, effects:["代言事件機率提升"], risks:["緋聞風險增加"]},
+    {title:"偶像", prefix:"偶像", desc:"你與支持者建立連結。", salaryRaise:600, happy:2, rep:1, effects:["娛樂事件較容易帶來快樂"], risks:["輿論影響心情"]},
+  ],
+  從政:[
+    {title:"議員", prefix:"議員", desc:"你開始在公共事務中發聲。", salaryRaise:500, rep:2, effects:["政治事件名譽收益提升"], risks:["輿論攻擊機率提升"]},
+    {title:"市長", prefix:"市長", desc:"你開始承擔一座城市的期待。", salaryRaise:900, rep:3, effects:["社會事件加成"], risks:["醜聞影響更大"]},
+    {title:"公共改革者", prefix:"公共改革者", desc:"你試著把理念變成制度。", salaryRaise:600, rep:2, happy:1, effects:["公益與政策事件加成"], risks:["壓力事件增加"]},
+  ],
+  開礦:[
+    {title:"礦工", suffix:"礦工", desc:"你在黑暗中尋找資源。", salaryRaise:400, effects:["開礦收益略提升"], risks:["工安風險"]},
+    {title:"礦場主", suffix:"礦場主", desc:"你開始掌握地下的財富。", salaryRaise:900, rep:1, effects:["開礦收益提升"], risks:["健康與家庭壓力"]},
+    {title:"工程專家", suffix:"工程專家", desc:"你以專業解決危險難題。", salaryRaise:700, rep:2, happy:1, effects:["開礦風險略降低"], risks:["工作環境仍具風險"]},
+  ],
+};
+function getAchievementChoices(career,tier){
+  const tierName=tier===1?"初階":tier===2?"二階":"傳奇";
+  const rarity=tier===1?"普通":tier===2?"稀有":"傳奇";
+  return (achievementChoiceSeeds[career]||[]).map(seed=>({
+    ...seed,
+    tier,
+    career,
+    rarity,
+    title: tier===1 ? seed.title : tier===2 ? `資深${seed.title}` : `傳奇${seed.title}`,
+    desc: `${seed.desc}（${tierName}頭銜）`,
+    salaryRaise: Math.round((seed.salaryRaise||0) * (tier===1?1:tier===2?1.4:1.8)),
+    rep: Math.round((seed.rep||0) * (tier===1?1:tier===2?1.4:1.8)),
+    happy: Math.round((seed.happy||0) * (tier===1?1:tier===2?1.3:1.6)),
+  }));
+}
+
 function ageText(ageMonths){
   const years=Math.floor(ageMonths/12); const m=ageMonths%12;
   return `${years}歲${m ? m + "個月" : ""}`;
@@ -172,7 +231,7 @@ function createPlayer(name, animal, target){
 
 function applyEffect(player, effect){
   const p={...player};
-  if(effect.cash) p.cash += Math.round(effect.cash / 2); // V2.7 財富取得與支出影響減半，降低財富膨脹
+  if(effect.cash) p.cash += Math.round(effect.cash / 2)
   if(effect.happiness) p.happiness += effect.happiness;
   if(effect.reputation) p.reputation += effect.reputation;
   if(effect.salaryRaise) p.salary += effect.salaryRaise;
@@ -210,6 +269,12 @@ function App(){
   const [moving,setMoving]=useState(false);
   const [gameOver,setGameOver]=useState(false);
   const [autobiography,setAutobiography]=useState("");
+  const [music,setMusic]=useState(false);
+  const audioRef=useRef(null);
+  const playersRef=useRef(players);
+
+  useEffect(()=>{ playersRef.current=players; },[players]);
+  useEffect(()=>{ const a=audioRef.current; if(!a) return; a.loop=true; if(music) a.play().catch(()=>{}); else a.pause(); },[music]);
 
   const current=players[turn];
   const boardTile = current ? outerBoard[current.outerPos] : null;
@@ -269,7 +334,7 @@ function App(){
   }
 
   function resolveLanding(){
-    const p=players[turn];
+    const p=playersRef.current[turn];
     if(!p) return;
     if(p.ageMonths >= MAX_AGE_MONTHS){ endByAge(p); return; }
     if(p.career){
@@ -315,7 +380,7 @@ function App(){
 
   function effectText(ev){
     const arr=[];
-    if(ev.cash) arr.push(`金錢變化：${money(Math.round(ev.cash/2))}（V2.7財富影響減半）`);
+    if(ev.cash) arr.push(`金錢變化：${money(Math.round(ev.cash/2))}`);
     if(ev.happiness) arr.push(`快樂 ${ev.happiness>0?'+':''}${ev.happiness}`);
     if(ev.reputation) arr.push(`名譽 ${ev.reputation>0?'+':''}${ev.reputation}`);
     return arr.length?arr.join("｜"):"沒有直接數值變化。";
@@ -337,10 +402,10 @@ function App(){
     const p=current;
     const nextCount=(p.careerCounts[career]||0)+1;
     const tier=Math.min(nextCount,3);
-    const choices=(achievementPools[career]||[]).filter(a=>a.tier===tier);
+    const choices=getAchievementChoices(career,tier);
     setModal({
       title:`完成${career}道路`,
-      desc:`這是你第 ${nextCount} 次完成${career}道路。請選擇一項人生成就。\n（選擇前不顯示稀有度，選完後才揭曉。）`,
+      desc:`這是你第 ${nextCount} 次完成${career}道路。請選擇一項人生成就。`,
       custom: <div className="achievementChoices">{choices.map((a,idx)=><button key={idx} onClick={()=>chooseAchievement(career,a,nextCount)}><b>{a.title}</b><span>{a.desc}</span></button>)}</div>
     });
   }
@@ -424,11 +489,11 @@ function App(){
     setModal({title:`頭銜資訊｜${t.title}`, desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n來源：${t.career}\n${t.salaryRaise?`加薪 ${t.salaryRaise}`:""}\n${t.effects?.length?`效果：${t.effects.join('、')}`:""}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}`});
   }
 
-  if(screen==="setup") return <div className="app setup"><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="setupPanel"><label>玩家人數 <select value={playerCount} onChange={e=>setPlayerCount(Number(e.target.value))}>{[1,2,3,4,5,6].map(n=><option key={n}>{n}</option>)}</select></label>{setupPlayers.map((p,i)=>{const sum=targetSum(p.target); return <div className="setupCard" key={i}><div className="row"><input value={p.name} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><select value={p.animal} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,animal:e.target.value}:x))}>{animals.map(a=><option key={a}>{a}</option>)}</select></div><div className="targetGrid">{[["wealth","財富"],["happiness","快樂"],["reputation","名譽"]].map(([k,label])=><label key={k}>{label}<input type="number" value={p.target[k]} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,target:{...x.target,[k]:Number(e.target.value)}}:x))}/></label>)}</div><div className={sum===100?"ok hint":"bad hint"}>目標總和：{sum}／100　{sum<100?`尚缺 ${100-sum}`:sum>100?`超出 ${sum-100}`:"可以開始"}</div></div>})}<button className="primary" onClick={startGame}>開始人生</button></div>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  if(screen==="setup") return <div className="app setup"><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="setupPanel"><label>玩家人數 <select value={playerCount} onChange={e=>setPlayerCount(Number(e.target.value))}>{[1,2,3,4,5,6].map(n=><option key={n}>{n}</option>)}</select></label>{setupPlayers.map((p,i)=>{const sum=targetSum(p.target); return <div className="setupCard" key={i}><div className="row"><input value={p.name} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/><select value={p.animal} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,animal:e.target.value}:x))}>{animals.map(a=><option key={a}>{a}</option>)}</select></div><div className="targetGrid">{[["wealth","財富"],["happiness","快樂"],["reputation","名譽"]].map(([k,label])=><label key={k}>{label}<input type="range" min="0" max="100" value={p.target[k]} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,target:{...x.target,[k]:Number(e.target.value)}}:x))}/><input type="number" min="0" max="100" value={p.target[k]} onChange={e=>setSetupPlayers(arr=>arr.map((x,j)=>j===i?{...x,target:{...x.target,[k]:Number(e.target.value)}}:x))}/></label>)}</div><div className={sum===100?"ok hint":"bad hint"}>目標總和：{sum}／100　{sum<100?`尚缺 ${100-sum}`:sum>100?`超出 ${sum-100}`:"可以開始"}</div></div>})}<button className="primary" onClick={startGame}>開始人生</button></div>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 
   if(screen==="autobiography") return <div className="app"><h1>人生自傳</h1><pre className="autobio">{autobiography}</pre><div className="row"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={()=>setScreen("game")}>返回遊戲</button></div></div>;
 
-  return <div className="app"><header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.title}</button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  return <div className="app"><audio ref={audioRef} src="/bgm.wav"/><header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.title}</button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 }
 
 function Modal({modal,close}){ return <div className="modalBackdrop"><div className="modal"><h2>{modal.title}</h2>{modal.desc&&<p className="modalDesc">{modal.desc}</p>}{modal.custom}{modal.actions?<div className="modalActions">{modal.actions.map((a,i)=><button key={i} className={i===0?'primary':''} onClick={a.onClick}>{a.label}</button>)}</div>:<button className="primary" onClick={close}>確認</button>}</div></div> }
