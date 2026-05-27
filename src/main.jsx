@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.82 響應式UI與人生岔路版";
+const VERSION = "V2.83 職業差異與人生結算修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -17,6 +17,7 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+  {version:"V2.83 職業差異與人生結算修正版", theme:"讓八大職業有更清楚的人生差異，並修正人生結算視窗無法關閉。", items:["人生結算視窗新增返回、重新開始與查看自傳按鈕", "調慢快樂與名譽累積速度", "八大職業加入更明確的門檻與風險報酬差異", "高風險職業如開礦、月球探險成本提高但報酬也提高", "職業事件依道路定位重新平衡"]},
   {version:"V2.82 響應式UI與人生岔路版", theme:"讓介面更適合不同載具，並開始紀錄人生岔路。", items:["新增 Release Notes 更新日誌入口", "頭銜區改為可捲動人生徽章，不再壓到地圖", "新增職業入口略過紀錄，作為未來人生小說素材", "移除右上／右下地圖缺口面板，回到完整回字型視覺", "優化手機與平板顯示"]},
   {version:"V2.81 人生結局與支持系統版", theme:"讓人生結局更完整。", items:["新增人生結局支持區", "支援 support_qr.jpg", "新增贊助支持與回饋作者按鈕", "頭銜資訊卡與裝備概念導入"]},
   {version:"V2.8 音效沉浸與職業修正版", theme:"讓職業道路與音效系統穩定。", items:["修正職業內圈卡死", "職業完成後可取得頭銜", "支援職業音樂切換", "支援金幣雨音效與支持者序號"]},
@@ -32,21 +33,21 @@ const outerBoard = [
   { id: "start", name: "發薪日", type: "payday", icon: "💰" },
   { id: "family-1", name: "家庭事件", type: "family", icon: "🏠" },
   { id: "chance-1", name: "機會", type: "chance", icon: "🎴" },
-  { id: "career-academy", name: "學院入口", type: "careerEntry", career: "學院", icon: "🎓", fee: 1000, requirement: "無；已有學院經驗可免入門費" },
+  { id: "career-academy", name: "學院入口", type: "careerEntry", career: "學院", icon: "🎓", fee: 1200, requirement: "建議名譽3以上；已有學院經驗可免入門費" },
   { id: "family-2", name: "家庭事件", type: "family", icon: "👨‍👩‍👧" },
-  { id: "career-farm", name: "農墾入口", type: "careerEntry", career: "農墾", icon: "🌾", fee: 800, requirement: "無；已有農墾經驗可免入門費" },
+  { id: "career-farm", name: "農墾入口", type: "careerEntry", career: "農墾", icon: "🌾", fee: 500, requirement: "無特殊門檻；已有農墾經驗可免入門費" },
   { id: "chance-2", name: "機會", type: "chance", icon: "🎴" },
-  { id: "career-business", name: "企業入口", type: "careerEntry", career: "企業", icon: "💼", fee: 1200, requirement: "無；已有企業經驗可免入門費" },
+  { id: "career-business", name: "企業入口", type: "careerEntry", career: "企業", icon: "💼", fee: 2000, requirement: "現金10000以上較容易進入；已有企業經驗可免入門費" },
   { id: "family-3", name: "家庭事件", type: "family", icon: "❤️" },
-  { id: "career-sail", name: "航海入口", type: "careerEntry", career: "航海", icon: "⚓", fee: 1500, requirement: "無；已有航海經驗可免入門費" },
+  { id: "career-sail", name: "航海入口", type: "careerEntry", career: "航海", icon: "⚓", fee: 1800, requirement: "快樂5以上較適合長程冒險；已有航海經驗可免入門費" },
   { id: "chance-3", name: "機會", type: "chance", icon: "🎴" },
-  { id: "career-moon", name: "月球探險入口", type: "careerEntry", career: "月球探險", icon: "🚀", fee: 2000, requirement: "需有任一職業經驗；已有月球探險經驗可免入門費" },
+  { id: "career-moon", name: "月球探險入口", type: "careerEntry", career: "月球探險", icon: "🚀", fee: 12000, requirement: "需有任一職業經驗、名譽25以上或持有學院／航海頭銜；高成本高風險" },
   { id: "family-4", name: "家庭事件", type: "family", icon: "🏡" },
-  { id: "career-movie", name: "電影明星入口", type: "careerEntry", career: "電影明星", icon: "🎬", fee: 1200, requirement: "無；已有電影明星經驗可免入門費" },
+  { id: "career-movie", name: "電影明星入口", type: "careerEntry", career: "電影明星", icon: "🎬", fee: 1800, requirement: "快樂8以上或名譽5以上較適合；已有電影明星經驗可免入門費" },
   { id: "chance-4", name: "機會", type: "chance", icon: "🎴" },
-  { id: "career-politics", name: "從政入口", type: "careerEntry", career: "從政", icon: "🏛️", fee: 1500, requirement: "名譽不低於 -5；已有從政經驗可免入門費" },
+  { id: "career-politics", name: "從政入口", type: "careerEntry", career: "從政", icon: "🏛️", fee: 2500, requirement: "名譽20以上，或持有學院／公共頭銜；已有從政經驗可免入門費" },
   { id: "family-5", name: "家庭事件", type: "family", icon: "🧓" },
-  { id: "career-mine", name: "開礦入口", type: "careerEntry", career: "開礦", icon: "⛏️", fee: 1500, requirement: "無；已有開礦經驗可免入門費" },
+  { id: "career-mine", name: "開礦入口", type: "careerEntry", career: "開礦", icon: "⛏️", fee: 15000, requirement: "現金20000以上或企業二階頭銜；高投入高報酬" },
   { id: "chance-5", name: "機會", type: "chance", icon: "🎴" },
   { id: "family-6", name: "家庭事件", type: "family", icon: "🍲" },
 ];
@@ -60,56 +61,56 @@ const careerBoards = Object.fromEntries(careers.map((career, idx) => [career, Ar
 }))]));
 
 const familyEvents = [
-  { title: "家庭聚餐", desc: "家人圍坐一桌，你想起人生不只有工作。", cash: -500, happiness: 4, reputation: 0, important: true },
-  { title: "家人支持", desc: "家人在低潮時給了你一句鼓勵。", cash: 0, happiness: 5, reputation: 0, important: true },
-  { title: "長輩生病", desc: "你花時間陪伴與照顧長輩。", cash: -1000, happiness: -2, reputation: 2, important: true },
+  { title: "家庭聚餐", desc: "家人圍坐一桌，你想起人生不只有工作。", cash: -500, happiness: 2, reputation: 0, important: true },
+  { title: "家人支持", desc: "家人在低潮時給了你一句鼓勵。", cash: 0, happiness: 3, reputation: 0, important: true },
+  { title: "長輩生病", desc: "你花時間陪伴與照顧長輩。", cash: -1500, happiness: -1, reputation: 1, important: true },
   { title: "家庭衝突", desc: "價值觀不同帶來爭執，讓你感到疲憊。", cash: 0, happiness: -2, reputation: 0, important: false },
-  { title: "孩子的笑聲", desc: "平凡的日常裡，你重新感受到生活的溫度。", cash: -500, happiness: 6, reputation: 0, important: true },
-  { title: "伴侶的理解", desc: "有人理解你的選擇，讓你更堅定。", cash: 0, happiness: 4, reputation: 1, important: true },
-  { title: "親友借錢", desc: "親友遇到困難向你開口，你選擇伸出援手。", cash: -1000, happiness: 1, reputation: 2, important: false },
-  { title: "家族旅行", desc: "短暫離開壓力，你與重要的人留下回憶。", cash: -1500, happiness: 7, reputation: 0, important: true },
+  { title: "孩子的笑聲", desc: "平凡的日常裡，你重新感受到生活的溫度。", cash: -500, happiness: 3, reputation: 0, important: true },
+  { title: "伴侶的理解", desc: "有人理解你的選擇，讓你更堅定。", cash: 0, happiness: 2, reputation: 1, important: true },
+  { title: "親友借錢", desc: "親友遇到困難向你開口，你選擇伸出援手。", cash: -1000, happiness: 1, reputation: 1, important: false },
+  { title: "家族旅行", desc: "短暫離開壓力，你與重要的人留下回憶。", cash: -1500, happiness: 4, reputation: 0, important: true },
 ];
 
 const chanceEvents = [
   { title: "貴人指路", desc: "一位貴人替你指出新的方向。", cash: 500, happiness: 1, reputation: 1, card: "機會卡", important: true },
   { title: "小額投資成功", desc: "你做了一筆謹慎投資，得到些微回報。", cash: 1000, happiness: 0, reputation: 0, important: false },
   { title: "意外支出", desc: "生活總有意外，你不得不支付一筆開銷。", cash: -1000, happiness: -1, reputation: 0, important: false },
-  { title: "地方表揚", desc: "你的努力被看見，開始受到更多人注意。", cash: 0, happiness: 1, reputation: 3, important: true },
-  { title: "稀有機會：人生轉折", desc: "命運給了你一次罕見的轉向機會。", cash: 1000, happiness: 3, reputation: 3, rare: true, important: true },
+  { title: "地方表揚", desc: "你的努力被看見，開始受到更多人注意。", cash: 0, happiness: 1, reputation: 2, important: true },
+  { title: "稀有機會：人生轉折", desc: "命運給了你一次罕見的轉向機會。", cash: 1000, happiness: 2, reputation: 2, rare: true, important: true },
 ];
 
 const careerEvents = {
   學院: [
-    { title: "研究突破", desc: "你在研究中看見新的可能。", cash: 0, happiness: 2, reputation: 3, important: true },
+    { title: "研究突破", desc: "你在研究中看見新的可能。", cash: 0, happiness: 1, reputation: 2, important: true },
     { title: "升等壓力", desc: "漫長的審查讓你感到疲憊。", cash: 0, happiness: -1, reputation: 1 },
   ],
   農墾: [
-    { title: "豐收", desc: "土地回應了你的耐心。", cash: 1000, happiness: 4, reputation: 1, important: true },
+    { title: "豐收", desc: "土地回應了你的耐心。", cash: 800, happiness: 2, reputation: 1, important: true },
     { title: "天候不穩", desc: "風雨打亂了耕作節奏。", cash: -1000, happiness: -1, reputation: 0 },
   ],
   企業: [
-    { title: "專案成功", desc: "你帶領團隊完成關鍵任務。", cash: 1000, happiness: 0, reputation: 2, important: true },
-    { title: "加班連夜", desc: "財務有成長，生活卻被工作占滿。", cash: 1000, happiness: -1, reputation: 1 },
+    { title: "專案成功", desc: "你帶領團隊完成關鍵任務。", cash: 2500, happiness: -1, reputation: 1, important: true },
+    { title: "加班連夜", desc: "財務有成長，生活卻被工作占滿。", cash: 2000, happiness: -2, reputation: 1 },
   ],
   航海: [
-    { title: "遠洋貿易", desc: "你從遠方帶回新的見聞與收益。", cash: 1500, happiness: 1, reputation: 1, important: true },
-    { title: "海上風暴", desc: "風浪提醒你人生的不可預測。", cash: -1000, happiness: -1, reputation: 1 },
+    { title: "遠洋貿易", desc: "你從遠方帶回新的見聞與收益。", cash: 2500, happiness: 0, reputation: 1, important: true },
+    { title: "海上風暴", desc: "風浪提醒你人生的不可預測。", cash: -1500, happiness: -1, reputation: 1 },
   ],
   月球探險: [
-    { title: "太空任務成功", desc: "你短暫離開地球，名聲傳回人間。", cash: 1000, happiness: 2, reputation: 5, important: true },
+    { title: "太空任務成功", desc: "你短暫離開地球，名聲傳回人間。", cash: 5000, happiness: 0, reputation: 4, important: true },
     { title: "孤獨航程", desc: "偉大的冒險也伴隨難以言說的孤寂。", cash: 0, happiness: -2, reputation: 2 },
   ],
   電影明星: [
-    { title: "新片上映", desc: "聚光燈照向你，觀眾記住了你的名字。", cash: 1000, happiness: 1, reputation: 4, important: true },
+    { title: "新片上映", desc: "聚光燈照向你，觀眾記住了你的名字。", cash: 1800, happiness: 2, reputation: 2, important: true },
     { title: "緋聞風波", desc: "名聲帶來掌聲，也帶來壓力。", cash: 0, happiness: -1, reputation: -2, important: true },
   ],
   從政: [
-    { title: "政策獲得支持", desc: "你的理念開始影響更多人。", cash: 0, happiness: 1, reputation: 5, important: true },
+    { title: "政策獲得支持", desc: "你的理念開始影響更多人。", cash: 0, happiness: 0, reputation: 3, important: true },
     { title: "輿論攻擊", desc: "站上舞台，也意味著承受批評。", cash: 0, happiness: -1, reputation: -3 },
   ],
   開礦: [
-    { title: "挖到礦脈", desc: "地下的資源帶來可觀收益。", cash: 1500, happiness: 0, reputation: 1, important: true },
-    { title: "工安事故", desc: "高收益的背後，也有沉重代價。", cash: -1000, happiness: -1, reputation: -1, important: true },
+    { title: "挖到礦脈", desc: "地下的資源帶來可觀收益。", cash: 6000, happiness: -1, reputation: 1, important: true },
+    { title: "工安事故", desc: "高收益的背後，也有沉重代價。", cash: -3500, happiness: -2, reputation: -1, important: true },
   ],
 };
 
@@ -210,8 +211,8 @@ function getAchievementChoices(career,tier){
     title: tier===1 ? seed.title : tier===2 ? `資深${seed.title}` : `傳奇${seed.title}`,
     desc: `${seed.desc}（${tierName}頭銜）`,
     salaryRaise: Math.round((seed.salaryRaise||0) * (tier===1?1:tier===2?1.4:1.8)),
-    rep: Math.round((seed.rep||0) * (tier===1?1:tier===2?1.4:1.8)),
-    happy: Math.round((seed.happy||0) * (tier===1?1:tier===2?1.3:1.6)),
+    rep: Math.max(0, Math.round((seed.rep||0) * (tier===1?0.7:tier===2?1.0:1.25))),
+    happy: Math.max(0, Math.round((seed.happy||0) * (tier===1?0.7:tier===2?1.0:1.2))),
   }));
 }
 
@@ -248,8 +249,8 @@ function createPlayer(name, animal, target){
 function applyEffect(player, effect){
   const p={...player};
   if(effect.cash) p.cash += Math.round(effect.cash / 2)
-  if(effect.happiness) p.happiness += effect.happiness;
-  if(effect.reputation) p.reputation += effect.reputation;
+  if(effect.happiness) p.happiness += effect.happiness > 0 ? Math.ceil(effect.happiness * 0.65) : effect.happiness;
+  if(effect.reputation) p.reputation += effect.reputation > 0 ? Math.ceil(effect.reputation * 0.65) : effect.reputation;
   if(effect.salaryRaise) p.salary += effect.salaryRaise;
   if(p.cash <= 0){
     p.bankrupt = true;
@@ -271,6 +272,30 @@ function eventByTrait(list, trait){
     for(let i=0;i<w;i++) weighted.push(e);
   }
   return weighted[Math.floor(Math.random()*weighted.length)];
+}
+
+function hasCareerTitle(player, career){
+  return (player.titles || []).some(t => t.career === career);
+}
+function careerGate(player, career){
+  const cash = player.cash;
+  const rep = player.reputation;
+  const happy = player.happiness;
+  const titles = player.titles || [];
+  const hasAcademic = titles.some(t => t.career === "學院");
+  const hasBusinessTier2 = titles.some(t => t.career === "企業" && t.tier >= 2);
+  const hasPublic = titles.some(t => /公共|市長|議員|政治/.test(t.title || ""));
+  const hasSail = titles.some(t => t.career === "航海");
+  if((player.careerCounts?.[career] || 0) > 0) return {ok:true, reason:"已有相關職業經驗，可再次進入。"};
+  if(career === "農墾") return {ok:true, reason:"農墾道路沒有特殊門檻。"};
+  if(career === "學院") return rep >= 3 ? {ok:true, reason:"名譽足以支撐學院道路。"} : {ok:false, reason:"學院道路建議名譽至少3。"};
+  if(career === "企業") return cash >= 10000 ? {ok:true, reason:"現金足以承擔企業道路的投入。"} : {ok:false, reason:"企業道路需要現金至少$10,000。"};
+  if(career === "電影明星") return (happy >= 8 || rep >= 5) ? {ok:true, reason:"你已有足夠魅力或能見度。"} : {ok:false, reason:"電影明星道路需要快樂8以上或名譽5以上。"};
+  if(career === "從政") return (rep >= 20 || hasAcademic || hasPublic) ? {ok:true, reason:"你具備公共領域的基礎。"} : {ok:false, reason:"從政道路需要名譽20以上，或持有學院／公共頭銜。"};
+  if(career === "航海") return happy >= 5 ? {ok:true, reason:"你仍有足夠心力承受遠行。"} : {ok:false, reason:"航海道路需要快樂5以上，否則遠行太過沉重。"};
+  if(career === "開礦") return (cash >= 20000 || hasBusinessTier2) ? {ok:true, reason:"你具備承擔高投入風險的條件。"} : {ok:false, reason:"開礦道路需要現金至少$20,000，或企業二階頭銜。"};
+  if(career === "月球探險") return (cash >= 30000 && rep >= 25) || hasAcademic || hasSail ? {ok:true, reason:"你具備投入極端探索的基礎。"} : {ok:false, reason:"月球探險需要現金$30,000且名譽25以上，或持有學院／航海頭銜。"};
+  return {ok:true, reason:"符合進入條件。"};
 }
 
 function App(){
@@ -403,9 +428,10 @@ function App(){
     if(tile.type==="careerEntry"){
       const hasExp=(p.careerCounts[tile.career]||0)>0;
       const fee=hasExp?0:tile.fee;
+      const gate = careerGate(p, tile.career);
       setModal({
         title:`${tile.icon} ${tile.career}道路入口`,
-        desc:`入門費：${fee===0?'已有經驗，免入門費':money(fee)}\n資格：${tile.requirement}`,
+        desc:`入門費：${fee===0?'已有經驗，免入門費':money(fee)}\n資格：${tile.requirement}\n目前判定：${gate.ok?'符合條件':'尚未符合'}｜${gate.reason}`,
         actions:[
           {label:"進入職業道路", onClick:()=>enterCareer(tile.career, fee)},
           {label:"略過", onClick:()=>skipCareer(tile.career)}
@@ -456,11 +482,10 @@ function App(){
   }
 
   function enterCareer(career, fee){
-    let allowed=true, reason="";
     const p=current;
-    if(career==="月球探險" && Object.values(p.careerCounts).reduce((a,b)=>a+b,0)<=0){ allowed=false; reason="月球探險需要至少一項職業經驗。"; }
-    if(career==="從政" && p.reputation < -5){ allowed=false; reason="名譽過低，目前不適合從政。"; }
-    if(p.cash - fee <= 0){ allowed=false; reason="現金不足，支付後將破產。"; }
+    const gate = careerGate(p, career);
+    let allowed=gate.ok, reason=gate.reason;
+    if(p.cash - fee <= 0){ allowed=false; reason="現金不足，支付入門費後將破產。"; }
     if(!allowed){ setModal({title:"無法進入", desc:reason, actions:[{label:"確認", onClick:()=>{setModal(null); nextTurn();}}]}); return; }
     updateCurrent(p=>({...applyEffect(p,{cash:-fee}), career, careerPos:0, careerProgress:0, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:`進入${career}道路`,desc:`選擇投入${career}人生道路。`,type:"career",important:true}]}));
     addLog(`${displayName(p)} 進入 ${career} 道路`);
@@ -506,7 +531,21 @@ function App(){
   }
   function nextTurn(){ setTurn(t=>(t+1)%players.length); }
   function endByAge(p){ endGame(p,"走到生命盡頭"); }
-  function endGame(p, reason){ setGameOver(true); const text=generateAutobiography(p, reason); setAutobiography(text); setModal({title:`${p.animal} ${displayName(p)}｜人生結算`, desc:`${reason}。可以產出人生自傳。`, actions:[{label:"查看人生自傳", onClick:()=>setScreen("autobiography")}]}); }
+  function restartGame(){ window.location.reload(); }
+  function endGame(p, reason){
+    setGameOver(true);
+    const text=generateAutobiography(p, reason);
+    setAutobiography(text);
+    setModal({
+      title:`${p.animal} ${displayName(p)}｜人生結算`,
+      desc:`${reason}。你可以查看或下載人生自傳，也可以先返回畫面回顧這段人生。`,
+      actions:[
+        {label:"查看人生自傳", onClick:()=>{setModal(null); setScreen("autobiography");}},
+        {label:"返回畫面", onClick:()=>setModal(null)},
+        {label:"重新開始", onClick:restartGame}
+      ]
+    });
+  }
 
   function displayName(p){
     const t=p.titles.find(x=>x.id===p.equippedTitleId);
