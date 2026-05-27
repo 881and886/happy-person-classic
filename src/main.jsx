@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.9 頭銜池與人生流派版";
+const VERSION = "V3.0 人生小說正式版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -17,6 +17,7 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+  {version:"V3.0 人生小說正式版", theme:"把人生結局從簡短自傳提升為多模板敘事小說，讓每段人生都能被回望、被記住。", items:["新增20種人生氛圍模板判定", "人生小說改為先揭示達成目標，再倒敘回顧生命旅程", "依初始目標、最終結果、頭銜、家庭、岔路與低谷組合不同敘事", "加入錯過職業道路、人生低潮、家庭片段與頭銜人格的故事化描述", "人生箴言改為依人生型態與頭銜變化", "移除人生評級概念，保留不完美與遺憾的真實感"]},
   {version:"V2.9 頭銜池與人生流派版", theme:"讓八大職業真正形成不同人生流派，完成職業後從頭銜池隨機抽出三個選項。", items:["每個職業依階層建立頭銜池", "完成職業時由同階頭銜池隨機抽出三個選項", "頭銜稀有度選擇前隱藏，選完後揭曉", "頭銜效果改為百分比加成為主", "特殊頭銜可同時帶來正向加成與反向代價", "裝備頭銜會影響事件收益與稀有事件機率", "頭銜資訊卡顯示人生格言、加成、風險與敘事傾向"]},
   {version:"V2.84 頭銜選擇與手機皮夾修正版", theme:"修正職業完成選頭銜流程，讓手機多人遊戲也能操作頭銜。", items:["職業完成時預設選取第一個頭銜，未選也不會卡流程", "頭銜選取後才可按確認取得頭銜", "選中的頭銜以粗框與高亮顯示", "手機版新增玩家皮夾／頭銜視窗", "玩家卡可直接開啟頭銜列表並切換目前頭銜"]},
   {version:"V2.83 職業差異與人生結算修正版", theme:"讓八大職業有更清楚的人生差異，並修正人生結算視窗無法關閉。", items:["人生結算視窗新增返回、重新開始與查看自傳按鈕", "調慢快樂與名譽累積速度", "八大職業加入更明確的門檻與風險報酬差異", "高風險職業如開礦、月球探險成本提高但報酬也提高", "職業事件依道路定位重新平衡"]},
@@ -754,50 +755,164 @@ function App(){
 
   function generateAutobiography(p, reason){
     const id=uid();
-    const important = p.lifeLog.filter(x=>x.important);
+    const important = (p.lifeLog || []).filter(x=>x.important);
+    const finalWealth=clampWealthCash(p.cash);
+    const finalValues={wealth:finalWealth,happiness:p.happiness,reputation:p.reputation};
+    const finalTop = Object.entries(finalValues).sort((a,b)=>b[1]-a[1])[0]?.[0] || "balance";
+    const targetTop = p.trait || "balance";
+    const mainCareer = Object.entries(p.careerCounts||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "人生";
+    const equipped = p.titles.find(t=>t.id===p.equippedTitleId) || p.titles[p.titles.length-1];
+    const finalTitle = equipped?.title || "人生旅人";
+    const titleTone = equipped?.narrative || equipped?.desc || "選擇、前行、回望";
+    const hasBankrupt = important.some(x=>x.type==="bankrupt");
+    const skipped = important.filter(x=>x.type==="branch");
+    const families = important.filter(x=>x.type==="family" || x.type==="家庭" || /家庭|家人|伴侶|孩子|長輩/.test(x.title+x.desc));
+    const titleEvents = important.filter(x=>x.type==="title");
+    const careerEventsDone = important.filter(x=>x.type==="career");
+    const reached = reason.includes("達成");
+    const high = Math.max(finalWealth,p.happiness,p.reputation);
+    const low = Math.min(finalWealth,p.happiness,p.reputation);
+    const titleNames=(p.titles||[]).map(t=>t.title).join("、") || "尚未留下明確頭銜";
+
+    function pick(arr, seed=0){
+      if(!arr.length) return "";
+      const n = Math.abs((p.name||"幸福人").split('').reduce((a,c)=>a+c.charCodeAt(0),0) + p.ageMonths + seed + important.length*7 + (p.titles?.length||0)*13);
+      return arr[n % arr.length];
+    }
+    function targetName(k){ return k==="wealth"?"財富":k==="happiness"?"快樂":k==="reputation"?"名譽":"平衡"; }
+    function personPhrase(k){
+      if(k==="wealth") return "逐漸掌握生活選擇權的人";
+      if(k==="happiness") return "能夠笑著回望日常的人";
+      if(k==="reputation") return "在世界留下痕跡的人";
+      return "在不同渴望之間找到平衡的人";
+    }
+    function finalReachOpening(){
+      if(reason.includes("達成")){
+        if(targetTop==="wealth") return `${ageText(p.ageMonths)}時，${displayName(p)}終於達成了年輕時替自己立下的人生目標。他未必擁有完美的人生，卻在歲月裡一步步接近財富自由，也更明白財富真正的重量。`;
+        if(targetTop==="happiness") return `${ageText(p.ageMonths)}時，${displayName(p)}終於抵達了自己曾經嚮往的幸福模樣。那不是毫無陰影的快樂，而是在經歷選擇、錯過與低潮之後，仍能笑看人生的從容。`;
+        if(targetTop==="reputation") return `${ageText(p.ageMonths)}時，${displayName(p)}終於活成了一位被人記得的人。那些掌聲、責任與爭議交織在一起，讓他的名字不只屬於自己，也留在他人的生命裡。`;
+        return `${ageText(p.ageMonths)}時，${displayName(p)}終於達成了他所理解的幸福。他沒有把人生押在單一答案上，而是在財富、快樂與名譽之間，慢慢找到能安放自己的位置。`;
+      }
+      return `${ageText(p.ageMonths)}時，${displayName(p)}走到了人生自然的終章。最初設定的目標未必全數完成，但一生的重量從來不只由達成與否決定，而是由走過的道路、錯過的機會與仍然珍惜的事物構成。`;
+    }
+
+    const archetypes = [
+      {key:"warm", cond:()=>p.happiness>=finalWealth && families.length>=2, name:"溫暖而平凡的人生", mood:"溫暖、陪伴、日常"},
+      {key:"wealth", cond:()=>finalWealth>=p.happiness && finalWealth>=p.reputation && targetTop==="wealth", name:"財富與責任的人生", mood:"成就、得失、責任"},
+      {key:"fame", cond:()=>p.reputation>=finalWealth && p.reputation>=p.happiness && targetTop==="reputation", name:"留下痕跡的人生", mood:"影響、名聲、承擔"},
+      {key:"happy", cond:()=>p.happiness>=40 && targetTop==="happiness", name:"笑看人生的人生", mood:"快樂、和解、珍惜"},
+      {key:"legend", cond:()=>/英雄|傳奇|領袖|教父|博士|大亨|時代/.test(titleNames) || high>=120, name:"帶有傳奇色彩的人生", mood:"壯闊、代價、記憶"},
+      {key:"regret", cond:()=>skipped.length>=2 || low<0, name:"帶著遺憾前行的人生", mood:"錯過、低潮、回望"},
+      {key:"rise", cond:()=>hasBankrupt && finalWealth>20, name:"東山再起的人生", mood:"跌倒、重建、韌性"},
+      {key:"wander", cond:()=>Object.values(p.careerCounts||{}).filter(v=>v>0).length>=3, name:"漂泊探索的人生", mood:"轉向、尋找、遠方"},
+      {key:"balance", cond:()=>Math.abs(finalWealth-p.happiness)<20 && Math.abs(p.happiness-p.reputation)<20, name:"平衡而完整的人生", mood:"取捨、安放、理解"},
+      {key:"unfinished", cond:()=>!reached, name:"未完成但真實的人生", mood:"未竟、留白、接受"},
+      {key:"power", cond:()=>mainCareer==="從政", name:"公共舞台上的人生", mood:"理想、爭議、責任"},
+      {key:"stars", cond:()=>mainCareer==="電影明星", name:"被世界注視的人生", mood:"光芒、壓力、孤獨"},
+      {key:"earth", cond:()=>mainCareer==="農墾", name:"與土地同行的人生", mood:"土地、四季、家人"},
+      {key:"academy", cond:()=>mainCareer==="學院", name:"以知識為路的人生", mood:"學習、傳承、思辨"},
+      {key:"sea", cond:()=>mainCareer==="航海", name:"向遠方漂泊的人生", mood:"遠方、孤獨、見聞"},
+      {key:"moon", cond:()=>mainCareer==="月球探險", name:"仰望星空的人生", mood:"理想、未知、孤獨"},
+      {key:"mine", cond:()=>mainCareer==="開礦", name:"高風險與高報酬的人生", mood:"冒險、代價、資源"},
+      {key:"business", cond:()=>mainCareer==="企業", name:"在市場中搏浪的人生", mood:"野心、壓力、成就"},
+      {key:"solitary", cond:()=>p.happiness<10 && (finalWealth>80 || p.reputation>80), name:"擁有很多卻仍孤獨的人生", mood:"光亮、空缺、孤獨"},
+      {key:"ordinary", cond:()=>true, name:"只屬於他自己的人生", mood:"選擇、錯過、堅持"},
+    ];
+    const archetype = archetypes.find(a=>a.cond()) || archetypes[archetypes.length-1];
+
     const grouped={};
     for(const item of important){
       const st=stageOf(item.ageMonths);
       grouped[st]=grouped[st]||[];
       grouped[st].push(item);
     }
-    const finalWealth=clampWealthCash(p.cash);
-    const tendency=p.trait==="wealth"?"財富導向":p.trait==="happiness"?"快樂導向":p.trait==="reputation"?"名譽導向":"平衡導向";
-    const mainCareer = Object.entries(p.careerCounts||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "人生";
-    const finalTitle = p.titles.find(t=>t.id===p.equippedTitleId)?.title || "無名旅人";
-    const hasBankrupt = p.lifeLog.some(x=>x.type==="bankrupt");
-    const familyCount = p.lifeLog.filter(x=>x.type==="家庭").length;
-    const titleCount = p.titles.length;
+    const stageOrder=["🌱 弱冠之年","🔥 而立之年","🌊 不惑之年","🍂 知天命","🌙 耳順之年","☀ 古稀之年","🌌 杖朝之年","📖 期頤之年"];
+    const stageLeads={
+      "🌱 弱冠之年":["年輕時的他，對未來仍有許多想像。那時的選擇多半倉促，卻也最接近心裡最初的渴望。","十八歲以後，人生像剛攤開的棋盤，每一步都不確定，卻每一步都開始留下痕跡。"],
+      "🔥 而立之年":["到了而立之年，他開始知道，人生不是只有出發時的熱血，還有選擇之後必須承擔的重量。","三十歲前後，許多事不再只是嘗試，而逐漸變成方向。"],
+      "🌊 不惑之年":["不惑之年並不是沒有疑惑，而是他開始懂得，有些問題不一定有標準答案。","走到中年，他開始重新衡量自己追求的東西，也開始看見某些曾被忽略的人與事。"],
+      "🍂 知天命":["知天命之後，他慢慢明白，人生既有努力能改變的部分，也有只能學著接受的安排。","五十歲以後，許多得失不再那麼尖銳，卻更能看出選擇留下的紋路。"],
+      "🌙 耳順之年":["耳順之年，他對世界少了一些急著反駁，多了一些願意理解。","六十歲以後，過去的掌聲與挫敗都慢慢沉澱，成為他看待人生的方式。"],
+      "☀ 古稀之年":["古稀之年，許多遠方變成回憶，許多曾經放不下的事，也開始有了不同的形狀。","晚年的他不再急著證明自己，而是開始分辨，哪些東西真正值得留下。"],
+      "🌌 杖朝之年":["人生走到更深處，回望比前進更常出現；那些曾經以為普通的日子，反而變得清晰。"],
+      "📖 期頤之年":["最後的旅程裡，他像翻閱一本舊書，重新讀懂自己曾經走過的每一頁。"]
+    };
+
+    function eventSentence(e, idx){
+      if(e.type==="branch") return `${ageText(e.ageMonths)}，他曾經站在${e.title.replace("略過","").replace("道路","")}的入口前。那條路並非沒有吸引力，只是當時的他選擇繼續往前；多年後想起，那也成為人生裡一條沒有走進去的岔路。`;
+      if(e.type==="title") return `${ageText(e.ageMonths)}，${e.title}。這不只是身份的改變，也像是在他的名字旁邊，添上一道歲月留下的註解。${e.desc||""}`;
+      if(e.type==="bankrupt") return `${ageText(e.ageMonths)}，他曾跌入金錢歸零的低谷。那段日子並不光彩，卻讓他知道，人有時必須先承認失去，才可能重新開始。`;
+      if(/家庭|家人|伴侶|孩子|長輩/.test(e.title+e.desc)) return `${ageText(e.ageMonths)}，${e.title}。${e.desc} 這樣的片刻不一定會被外人記得，卻常常比成就更靠近一個人的心。`;
+      if(e.type==="career") return `${ageText(e.ageMonths)}，他走向${e.title.replace("進入","").replace("道路","")}。那不是單純換一條路，而是把一段歲月交給另一種人生可能。`;
+      return `${ageText(e.ageMonths)}，${e.title}。${e.desc}`;
+    }
+
     const lines=[];
     lines.push(`《${displayName(p)}的一生》`);
     lines.push(`人生自傳編號：${id}`);
     lines.push(`生成版本：幸福人 Classic ${VERSION}`);
     lines.push(`生成時間：${new Date().toLocaleString()}`);
     lines.push("");
-    lines.push(`18歲那年，${p.name}帶著${money(STARTING_CASH)}踏上人生道路。那時的他，替自己設定了三個幸福目標：財富${p.target.wealth}、快樂${p.target.happiness}、名譽${p.target.reputation}。從這些選擇裡，可以看見他偏向「${tendency}」的人生氣質。`);
-    lines.push(`他並不知道未來會遇見多少機會，也不知道有些路走進去之後會改變自己，有些路則會在略過之後成為多年後想起的風景。`);
+    lines.push(`【${archetype.name}】`);
+    lines.push(finalReachOpening());
+    lines.push(`如果要用一句話描述他後來活成的模樣，也許可以說：他成為了一位${personPhrase(finalTop)}。然而，這句話仍不足以概括全部。回頭看這些年，他的生命裡有選擇，也有錯過；有堅持，也有某些無法重新來過的時刻。`);
+    lines.push(`年輕時，他替自己設定的目標是財富${p.target.wealth}、快樂${p.target.happiness}、名譽${p.target.reputation}。那組數字像是寫給未來自己的信，說明他最初相信什麼、渴望什麼，也暗示了他可能會為了什麼而努力。`);
     lines.push("");
-    const order=["🌱 弱冠之年","🔥 而立之年","🌊 不惑之年","🍂 知天命","🌙 耳順之年","☀ 古稀之年","🌌 杖朝之年","📖 期頤之年"];
-    for(const st of order){
-      const events=(grouped[st]||[]).slice(0,10);
+
+    for(const st of stageOrder){
+      const events=(grouped[st]||[]).slice(0,6);
       if(!events.length) continue;
       lines.push(`【${st}】`);
-      const lead = st.includes("弱冠") ? "人生剛開始時，每一次選擇都像在替未來埋下伏筆。" : st.includes("而立") ? "到了而立之年，他開始看見自己選擇的方向，也開始承擔選擇帶來的重量。" : st.includes("不惑") ? "不惑之年並不代表沒有疑惑，而是開始懂得與疑惑同行。" : st.includes("知天命") ? "知天命之後，他逐漸明白，有些收穫來自努力，有些安排則來自人生本身。" : st.includes("耳順") ? "耳順之年，他對世界的聲音少了抵抗，多了一點理解。" : "人生走到後段，許多曾經重要的事，都慢慢化為可以回望的故事。";
-      lines.push(lead);
-      events.forEach(e=>{
-        lines.push(`${ageText(e.ageMonths)}，${e.title}。${e.desc}`);
-      });
+      lines.push(pick(stageLeads[st]||["這段歲月裡，他繼續往前，也繼續理解自己。"], st.length));
+      events.forEach((e,i)=>lines.push(eventSentence(e,i)));
+      if(events.length>=3){
+        lines.push(pick([
+          "那幾年看似只是日常累積，卻慢慢把他推向後來的自己。",
+          "有些轉折當下並不明顯，回頭看時才知道，那些都是人生改變方向的聲音。",
+          "他未必每一次都選得正確，但每一次選擇都讓人生多了一層紋理。"
+        ], events.length));
+      }
       lines.push("");
     }
-    lines.push(`回望這一生，${p.name}最常走近的是「${mainCareer}」這條道路；他一共取得了${titleCount}個人生頭銜，而最後掛在名字上的，是「${finalTitle}」。`);
-    if(hasBankrupt) lines.push(`他也曾經歷金錢歸零的低谷。那不是人生的結束，而是讓他重新理解「失去」與「重新開始」的時刻。`);
-    if(familyCount>0) lines.push(`在許多家庭事件裡，他被提醒：人生不只由成就構成，也由那些日常裡的牽掛、支持、衝突與陪伴所組成。`);
-    lines.push(`最終，他的人生停在${ageText(p.ageMonths)}。結局的理由是：${reason}。此時他的財富為${finalWealth}，快樂為${p.happiness}，名譽為${p.reputation}。`);
+
+    lines.push("【回望】");
+    lines.push(`回望這一生，${p.name}最常走近的是「${mainCareer}」這條道路。這條路帶給他的，不只是數值上的變化，也塑造了他看待世界的方式。`);
+    if(titleNames!=="尚未留下明確頭銜") lines.push(`他曾擁有過這些頭銜：${titleNames}。其中最後被他掛在名字上的，是「${finalTitle}」。這個頭銜的氣味，像是${titleTone}，也讓他晚年的回望多了一點特別的顏色。`);
+    if(skipped.length){
+      const sample=skipped.slice(0,3).map(x=>x.title.replace("略過","").replace("道路","")).join("、");
+      lines.push(`他也曾經略過某些入口，例如${sample}。人生有時不是因為選了哪條路而被定義，也會因為沒有選擇哪條路而留下回音。那些未曾走進去的地方，並沒有消失，只是變成另一種想像。`);
+    }
+    if(hasBankrupt) lines.push("他曾經歷破產或低谷。那段經歷或許不適合被寫成榮耀，卻很適合被寫成真實。因為人不是在永遠順利的時候認識自己，而是在失去之後，才知道自己還能不能再次站起來。");
+    if(families.length){
+      lines.push(`家庭在他的人生裡出現了${families.length}次重要痕跡。有時是支持，有時是牽掛，有時也是責任。它們不像頭銜那樣耀眼，卻常在最安靜的地方，決定一個人是否真的感到幸福。`);
+    } else {
+      lines.push("在這段人生裡，家庭並不是最常被書寫的章節。也因此，到了某些安靜的時刻，他或許更能感受到，人生中沒有被選擇的關係，也會成為一種留白。");
+    }
+    lines.push(`最後的數值被系統記錄為：財富${finalWealth}、快樂${p.happiness}、名譽${p.reputation}。但這些數字只像書頁旁的頁碼，能幫人找到位置，卻不能替這本書下結論。`);
     lines.push("");
-    lines.push(`沒有人可以替另一個人的人生評級。${p.name}的一生也許有成功，也許有遺憾；也許有些路走得很深，有些路只是曾經路過。但正因為那些選擇、錯過與堅持，才使這段人生只屬於他自己。`);
+
+    lines.push("【人生的精華】");
+    const essencePool={
+      wealth:["他曾經相信，累積足夠多的財富，就能讓人生更自由。後來他慢慢明白，自由不只是擁有選擇，也包括知道自己願意為誰使用那些選擇。", "財富讓他走得更遠，也讓他看見更多人情的重量。到了最後，他不再只問自己擁有多少，而是問：這些擁有，是否曾讓某些重要的人過得更好。"],
+      happiness:["他追求的幸福不是永遠快樂，而是在不完美的日子裡，仍能找到值得珍惜的片刻。那些笑聲、陪伴與微小的安心，最後成了他最願意帶走的東西。", "快樂對他而言，並不是逃離風雨，而是在風雨過後，仍願意為一頓飯、一句問候、一段陪伴而感到滿足。"],
+      reputation:["他希望自己被世界看見，也希望自己的存在能留下某些影響。名譽帶來光，也帶來重量；但若那些影響曾讓別人的人生有一點不同，那就不是徒然。", "人終究會老去，名字也可能被時間沖淡。但他曾經做過的事，若能在他人的記憶裡繼續前行，就已經是一種留下。"],
+      balance:["他的一生不是單一方向的勝利，而是在不同渴望之間反覆調整。也許正因如此，他的人生沒有被一個答案鎖住，而是保留了許多可能。", "他慢慢理解，人生不必把所有重量都放在同一件事上。能讓不同的渴望彼此安放，本身就是一種成熟。"]
+    };
+    lines.push(pick(essencePool[targetTop]||essencePool.balance, 31));
+    lines.push("沒有人可以替另一個人的人生評級。" + `${p.name}的一生也許有成功，也許有遺憾；也許有些路走得很深，有些路只是曾經路過。但正因為那些選擇、錯過與堅持，才使這段人生只屬於他自己。`);
     lines.push("");
-    const motto = p.trait==="wealth" ? "人生箴言：真正重要的，往往不是最後擁有多少，而是你願意把擁有的東西，留給誰、用在哪裡。" : p.trait==="happiness" ? "人生箴言：幸福並不遙遠，它常常藏在那些平凡、細小，卻願意被珍惜的日子裡。" : p.trait==="reputation" ? "人生箴言：人終將老去，但曾經留下的影響，會在他人的記憶裡繼續前行。" : "人生箴言：人生不是單一答案，而是在有限歲月裡，學會讓不同的渴望彼此安放。";
-    lines.push(motto);
+    const quoteByTitle = equipped?.motto;
+    const quotePools={
+      warm:["幸福不是把人生過得沒有裂痕，而是在裂痕之間，仍願意留下溫柔。","有些日子看起來平凡，卻在很久以後，成為一個人最想回去的地方。"],
+      wealth:["真正重要的，往往不是最後擁有多少，而是你願意把擁有的東西，留給誰、用在哪裡。","財富能讓人走向遠方，但能不能回到心裡，仍要看自己如何使用它。"],
+      fame:["人終將老去，但曾經留下的影響，會在他人的記憶裡繼續前行。","被世界看見是一種榮耀，也是一種責任；真正困難的是，在光裡仍記得自己。"],
+      regret:["有些答案，或許直到人生最後也不一定能真正明白；但願意承認遺憾，本身也是一種誠實。","沒有走過的路不會消失，它們只是靜靜留在心裡，提醒人曾經有過選擇。"],
+      legend:["人類真正的邊界，從來不只在遠方，也在每一次願意超越自己的時刻。","傳奇不是沒有代價，而是有人願意背著代價，仍把故事走完。"],
+      ordinary:["有瑕疵的寶石，大家才會相信那是真實的寶石。","人生不是被磨成完美，而是在不完美中仍能折射出自己的光。"]
+    };
+    const quote = quoteByTitle || pick(quotePools[archetype.key] || quotePools[targetTop] || quotePools.ordinary, 77);
+    lines.push("【人生留下的一句話】");
+    lines.push(`「${quote.replace(/^「|」$/g,"")}」`);
     lines.push("");
     lines.push("本自傳由《幸福人 Classic》人生自傳系統生成。敘事模板、事件文本、系統設計與遊戲內容為原創智慧財產；未經授權不得重製、改作或商業使用。");
     return lines.join("\n");
