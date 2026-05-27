@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V2.83 職業差異與人生結算修正版";
+const VERSION = "V2.84 頭銜選擇與手機皮夾修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -17,6 +17,7 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+  {version:"V2.84 頭銜選擇與手機皮夾修正版", theme:"修正職業完成選頭銜流程，讓手機多人遊戲也能操作頭銜。", items:["職業完成時預設選取第一個頭銜，未選也不會卡流程", "頭銜選取後才可按確認取得頭銜", "選中的頭銜以粗框與高亮顯示", "手機版新增玩家皮夾／頭銜視窗", "玩家卡可直接開啟頭銜列表並切換目前頭銜"]},
   {version:"V2.83 職業差異與人生結算修正版", theme:"讓八大職業有更清楚的人生差異，並修正人生結算視窗無法關閉。", items:["人生結算視窗新增返回、重新開始與查看自傳按鈕", "調慢快樂與名譽累積速度", "八大職業加入更明確的門檻與風險報酬差異", "高風險職業如開礦、月球探險成本提高但報酬也提高", "職業事件依道路定位重新平衡"]},
   {version:"V2.82 響應式UI與人生岔路版", theme:"讓介面更適合不同載具，並開始紀錄人生岔路。", items:["新增 Release Notes 更新日誌入口", "頭銜區改為可捲動人生徽章，不再壓到地圖", "新增職業入口略過紀錄，作為未來人生小說素材", "移除右上／右下地圖缺口面板，回到完整回字型視覺", "優化手機與平板顯示"]},
   {version:"V2.81 人生結局與支持系統版", theme:"讓人生結局更完整。", items:["新增人生結局支持區", "支援 support_qr.jpg", "新增贊助支持與回饋作者按鈕", "頭銜資訊卡與裝備概念導入"]},
@@ -499,8 +500,8 @@ function App(){
     const choices=getAchievementChoices(career,tier);
     setModal({
       title:`完成${career}道路`,
-      desc:`這是你第 ${nextCount} 次完成${career}道路。請選擇一項人生成就。`,
-      custom: <div className="achievementChoices">{choices.map((a,idx)=><button key={idx} onClick={()=>chooseAchievement(career,a,nextCount)}><b>{a.title}</b><span>{a.desc}</span></button>)}</div>
+      desc:`這是你第 ${nextCount} 次完成${career}道路。請選擇一項人生成就。若沒有特別選擇，系統已先預選第一項。`,
+      custom: <AchievementPicker choices={choices} career={career} nextCount={nextCount} onConfirm={chooseAchievement} />
     });
   }
 
@@ -612,25 +613,44 @@ function App(){
     a.href=URL.createObjectURL(blob); a.download=`幸福人_人生自傳_${Date.now()}.txt`; a.click(); URL.revokeObjectURL(a.href);
   }
 
-  function titleInfo(t){
-    const equipped = current?.equippedTitleId === t.id;
+  function titleInfo(t, ownerIndex=turn){
+    const owner=players[ownerIndex] || current;
+    const equipped = owner?.equippedTitleId === t.id;
+    const canEquip = ownerIndex === turn && !gameOver;
     setModal({
       title:`頭銜資訊｜${t.title}`,
-      desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n稀有度：${t.rarity || (t.tier===1?'普通':t.tier===2?'稀有':'傳奇')}\n來源：${t.career || '人生事件'}\n${t.salaryRaise?`實際效果：加薪 ${t.salaryRaise}`:"實際效果：依事件觸發而定"}\n${t.effects?.length?`加成：${t.effects.join('、')}`:"加成：無明顯加成"}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}\n\n${equipped?'目前裝備中。':'你可以將此頭銜裝備為目前的人生身份。'}`,
-      actions: equipped
+      desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n稀有度：${t.rarity || (t.tier===1?'普通':t.tier===2?'稀有':'傳奇')}\n來源：${t.career || '人生事件'}\n${t.salaryRaise?`實際效果：加薪 ${t.salaryRaise}`:"實際效果：依事件觸發而定"}\n${t.effects?.length?`加成：${t.effects.join('、')}`:"加成：無明顯加成"}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}\n\n${equipped?'目前裝備中。':canEquip?'你可以將此頭銜裝備為目前的人生身份。':'只能在該玩家回合切換頭銜。'}`,
+      actions: equipped || !canEquip
         ? [{label:"確認", onClick:()=>setModal(null)}]
         : [
-            {label:"裝備此頭銜", onClick:()=>equipTitle(t.id)},
+            {label:"裝備此頭銜", onClick:()=>equipTitle(t.id, ownerIndex)},
             {label:"先不切換", onClick:()=>setModal(null)}
           ]
     });
   }
 
-  function equipTitle(titleId){
-    updateCurrent(p=>({...p, equippedTitleId:titleId, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:"切換人生頭銜",desc:"他重新選擇了此刻想被世界看見的身份。",type:"title",important:false}]}));
-    const t=current?.titles.find(x=>x.id===titleId);
-    addLog(`${current?.animal || ''} ${current?.name || ''} 裝備頭銜：${t?.title || '新頭銜'}`);
+  function equipTitle(titleId, ownerIndex=turn){
+    let chosen=null;
+    setPlayers(prev=>prev.map((p,i)=>{
+      if(i!==ownerIndex) return p;
+      chosen=(p.titles||[]).find(x=>x.id===titleId);
+      return {...p, equippedTitleId:titleId, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:"切換人生頭銜",desc:"他重新選擇了此刻想被世界看見的身份。",type:"title",important:false}]};
+    }));
+    const owner=players[ownerIndex];
+    addLog(`${owner?.animal || ''} ${owner?.name || ''} 裝備頭銜：${chosen?.title || '新頭銜'}`);
     setModal(null);
+  }
+
+  function showPlayerWallet(ownerIndex){
+    const p=players[ownerIndex];
+    if(!p) return;
+    const equipped=(p.titles||[]).find(t=>t.id===p.equippedTitleId);
+    setModal({
+      title:`${p.animal} ${displayName(p)}｜人生皮夾`,
+      desc:`${ageText(p.ageMonths)}\n現金：${money(p.cash)}｜薪水：${money(p.salary)}\n財富：${clampWealthCash(p.cash)}｜快樂：${p.happiness}｜名譽：${p.reputation}\n目前頭銜：${equipped?equipped.title:'尚無頭銜'}`,
+      custom:<div className="mobileWalletTitles">{(p.titles||[]).length?(p.titles.map(t=><button key={t.id} className={t.id===p.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t, ownerIndex)}>{t.id===p.equippedTitleId?'✓ ':''}{t.title}<small>{t.tier===1?'初階':t.tier===2?'二階':'傳奇'}｜點擊查看</small></button>)):<p>尚未取得頭銜。</p>}</div>,
+      actions:[{label:"關閉", onClick:()=>setModal(null)}]
+    });
   }
 
   function showSupportModal(){
@@ -664,12 +684,28 @@ function App(){
 
   if(screen==="autobiography") return <div className="app endingPage"><h1>📖 人生結局</h1><pre className="autobio">{autobiography}</pre><div className="endingActions"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={showSupportModal}>💖 贊助支持</button><button onClick={showFeedbackModal}>✉ 回饋作者</button><button onClick={()=>setScreen("game")}>返回遊戲</button></div><section className="supportPanel"><div><h2>🌱 支持幸福人計畫</h2><p>如果你喜歡這段人生旅程，歡迎贊助 100 元支持《幸福人》的持續開發。</p><p>你的支持，將成為更多人生故事誕生的力量。</p></div><img src="/support_qr.jpg" onError={e=>{e.currentTarget.style.display='none'}} alt="支持幸福人 QR Code"/></section>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 
-  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={showReleaseNotes}>📜 更新日誌</button><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${careerBoards[current.career].length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} title="點擊查看頭銜屬性或裝備" className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.id===current.equippedTitleId?'✓ ':''}{t.title}<small>{t.tier===1?'初階':t.tier===2?'二階':'傳奇'}</small></button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${careerBoards[p.career].length}`:`外圈 ${p.outerPos}`}</p></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={showReleaseNotes}>📜 更新日誌</button><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox"><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p><div className="dice">{dice?dice.total:"🎲"}</div><button className="primary" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${careerBoards[current.career].length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} title="點擊查看頭銜屬性或裝備" className={t.id===current.equippedTitleId?'equipped':''} onClick={()=>titleInfo(t)}>{t.id===current.equippedTitleId?'✓ ':''}{t.title}<small>{t.tier===1?'初階':t.tier===2?'二階':'傳奇'}</small></button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${careerBoards[p.career].length}`:`外圈 ${p.outerPos}`}</p><button className="walletOpenBtn" onClick={()=>showPlayerWallet(i)}>查看人生皮夾／頭銜</button></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 }
 
 function CoinRain(){
   const coins=useMemo(()=>Array.from({length:36},(_,i)=>({id:i,left:Math.random()*100,delay:Math.random()*0.6,duration:1.1+Math.random()*0.9,size:22+Math.random()*18,spin:Math.random()>0.5?1:-1})),[]);
   return <div className="coinRain" aria-hidden="true"><div className="salaryToast">💰 發薪日！</div>{coins.map(c=><span key={c.id} style={{left:`${c.left}%`,animationDelay:`${c.delay}s`,animationDuration:`${c.duration}s`,fontSize:`${c.size}px`,['--spin']:c.spin}}>🪙</span>)}</div>
+}
+
+function AchievementPicker({choices, career, nextCount, onConfirm}){
+  const [selected,setSelected]=useState(0);
+  const selectedChoice=choices[selected] || choices[0];
+  return <div className="achievementPicker">
+    <div className="achievementChoices">
+      {choices.map((a,idx)=><button type="button" key={idx} className={idx===selected?'selected':''} onClick={()=>setSelected(idx)} aria-pressed={idx===selected}>
+        <b>{idx===selected?'✓ ':''}{a.title}</b>
+        <span>{a.desc}</span>
+      </button>)}
+    </div>
+    <div className="modalActions achievementConfirm">
+      <button className="primary" onClick={()=>onConfirm(career, selectedChoice, nextCount)}>確認取得頭銜</button>
+    </div>
+  </div>
 }
 
 function Modal({modal,close}){ return <div className="modalBackdrop"><div className="modal"><h2>{modal.title}</h2>{modal.desc&&<p className="modalDesc">{modal.desc}</p>}{modal.custom}{modal.actions?<div className="modalActions">{modal.actions.map((a,i)=><button key={i} className={i===0?'primary':''} onClick={a.onClick}>{a.label}</button>)}</div>:<button className="primary" onClick={close}>確認</button>}</div></div> }
