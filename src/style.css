@@ -31,3 +31,38 @@
 @keyframes legendaryBreath{0%,100%{box-shadow:0 0 12px #f4c54266,inset 0 0 0 1px #fff0a5}50%{box-shadow:0 0 26px #ffd75ccc,inset 0 0 0 2px #fff6bd}}
 @keyframes legendarySweep{0%,55%{transform:translateX(-95%) rotate(8deg);opacity:0}65%{opacity:.75}100%{transform:translateX(95%) rotate(8deg);opacity:0}}
 @media(max-width:760px){.codexGrid{grid-template-columns:1fr}.titleInfoFrame b{font-size:20px}.starBadge{font-size:11px}.titles button .starBadge,.mobileWalletTitles button .starBadge{font-size:11px}.titles button,.mobileWalletTitles button{padding-top:20px!important}}
+
+/* V3.3 mobile operation and board visual-balance fixes */
+.turnHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.turnHeader h2{margin:0;line-height:1.15}
+.turnHeader p{margin:4px 0 0;font-weight:800;color:#6f4e24}
+.inlineRoll{white-space:nowrap;align-self:flex-start;min-width:72px;padding:9px 12px}
+.compactTurn .dice{font-size:52px;margin:10px 0;padding:8px 10px;min-height:74px;display:grid;place-items:center}
+.compactTurn>p{margin:6px 0 0;line-height:1.35}
+
+/* Re-center top and bottom rows to remove the distracting right-side void */
+.pos0{left:10.00%!important;top:2.78%}.pos1{left:25.75%!important;top:2.78%}.pos2{left:41.50%!important;top:2.78%}.pos3{left:57.25%!important;top:2.78%}.pos4{left:73.00%!important;top:2.78%}
+.pos10{left:73.00%!important;top:85%}.pos11{left:57.25%!important;top:85%}.pos12{left:41.50%!important;top:85%}.pos13{left:25.75%!important;top:85%}.pos14{left:10.00%!important;top:85%}
+
+@media(max-width:760px){
+  .centerStage{grid-template-columns:1fr;gap:7px;overflow:auto;padding:6px}
+  .turnBox,.wallet{padding:7px;border-width:2px;border-radius:13px}
+  .turnHeader{align-items:center;gap:6px}
+  .turnHeader h2{font-size:15px;line-height:1.1}
+  .turnHeader p{font-size:11px;margin-top:2px}
+  .inlineRoll{min-width:64px;padding:7px 9px;font-size:13px;border-radius:10px}
+  .compactTurn .dice{font-size:34px;min-height:44px;margin:5px 0;padding:3px 6px;border-radius:12px}
+  .compactTurn>p{font-size:10px;line-height:1.25;margin-top:3px}
+  .wallet p{font-size:10px;margin:2px 0}.wallet h3,.wallet h4{font-size:12px;margin:2px 0 4px}
+  .titles{max-height:82px;gap:4px}.titles button{font-size:10px;padding:17px 5px 4px!important}.titles button small{font-size:8px}
+}
+@media(max-width:520px){
+  .outerBoard{width:calc(100vw - 8px)!important;max-width:520px!important}
+  .centerStage{left:19.5%;top:18.5%;width:61%;height:63%}
+  .tile{width:14.8%;height:12.2%;font-size:8.5px;border-radius:9px}
+  .tile b{font-size:17px}.tile small{font-size:8.5px}.tile span{font-size:8px}
+  .pos0{left:9.00%!important}.pos1{left:25.25%!important}.pos2{left:41.50%!important}.pos3{left:57.75%!important}.pos4{left:74.00%!important}
+  .pos10{left:74.00%!important}.pos11{left:57.75%!important}.pos12{left:41.50%!important}.pos13{left:25.25%!important}.pos14{left:9.00%!important}
+  .inlineRoll{min-width:58px;padding:6px 8px;font-size:12px}
+  .compactTurn .dice{font-size:30px;min-height:38px}
+}
