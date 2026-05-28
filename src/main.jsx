@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V3.0 人生小說正式版";
+const VERSION = "V3.1 響應式地圖與頭銜操作修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -17,6 +17,7 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+  {version:"V3.1 響應式地圖與頭銜操作修正版", theme:"修正不同載具上的棋盤適配、頭銜查看返回流程、新頭銜裝備選擇與 iOS 金幣顯示。", items:["全載具響應式棋盤適配，避免中央資訊超出地圖", "頭銜資訊卡新增返回頭銜列表流程", "取得新頭銜後不再自動替換，改由玩家決定是否裝備", "iOS 金幣雨改用 CSS 金幣，不再依賴 emoji 顏色", "保留 V3.0 人生小說系統並修正操作體驗"]},
   {version:"V3.0 人生小說正式版", theme:"把人生結局從簡短自傳提升為多模板敘事小說，讓每段人生都能被回望、被記住。", items:["新增20種人生氛圍模板判定", "人生小說改為先揭示達成目標，再倒敘回顧生命旅程", "依初始目標、最終結果、頭銜、家庭、岔路與低谷組合不同敘事", "加入錯過職業道路、人生低潮、家庭片段與頭銜人格的故事化描述", "人生箴言改為依人生型態與頭銜變化", "移除人生評級概念，保留不完美與遺憾的真實感"]},
   {version:"V2.9 頭銜池與人生流派版", theme:"讓八大職業真正形成不同人生流派，完成職業後從頭銜池隨機抽出三個選項。", items:["每個職業依階層建立頭銜池", "完成職業時由同階頭銜池隨機抽出三個選項", "頭銜稀有度選擇前隱藏，選完後揭曉", "頭銜效果改為百分比加成為主", "特殊頭銜可同時帶來正向加成與反向代價", "裝備頭銜會影響事件收益與稀有事件機率", "頭銜資訊卡顯示人生格言、加成、風險與敘事傾向"]},
   {version:"V2.84 頭銜選擇與手機皮夾修正版", theme:"修正職業完成選頭銜流程，讓手機多人遊戲也能操作頭銜。", items:["職業完成時預設選取第一個頭銜，未選也不會卡流程", "頭銜選取後才可按確認取得頭銜", "選中的頭銜以粗框與高亮顯示", "手機版新增玩家皮夾／頭銜視窗", "玩家卡可直接開啟頭銜列表並切換目前頭銜"]},
@@ -704,17 +705,30 @@ function App(){
 
   function chooseAchievement(career,a,nextCount){
     const title={...a,id:Math.random().toString(36).slice(2),career};
+    const hadEquipped = !!current?.equippedTitleId;
     updateCurrent(p=>{
       let np={...p};
       np.careerCounts={...np.careerCounts,[career]:nextCount};
       np.titles=[...np.titles,title];
-      np.equippedTitleId=title.id;
+      if(!np.equippedTitleId) np.equippedTitleId=title.id;
       np.career=null; np.careerPos=0; np.careerProgress=0;
       np=applyEffect(np,{salaryRaise:a.salaryRaise,reputation:a.rep||0,happiness:a.happy||0});
       np.lifeLog=[...np.lifeLog,{ageMonths:np.ageMonths,title:`獲得頭銜：${a.title}`,desc:`${a.desc}${a.salaryRaise?` 並加薪 ${a.salaryRaise}。`:""}`,type:"title",important:true}];
       return np;
     });
-    setModal({title:`獲得頭銜：${a.title}`, desc:`${a.desc}\n\n階級：${a.tier===1?'初階':a.tier===2?'二階':'傳奇'}\n${a.salaryRaise?`加薪 ${a.salaryRaise}`:""}\n${a.effects?.length?`效果：${a.effects.join('、')}`:""}`, actions:[{label:"確認", onClick:()=>{setModal(null); checkOrNext();}}]});
+    const detail=`${a.desc}\n\n階級：${a.tier===1?'初階':a.tier===2?'二階':'傳奇'}\n稀有度：${a.rarity || '未明'}\n${a.salaryRaise?`加薪 ${a.salaryRaise}\n`:""}${a.effects?.length?`效果：${a.effects.join('、')}\n`:""}${a.risks?.length?`風險：${a.risks.join('、')}`:""}`;
+    if(!hadEquipped){
+      setModal({title:`獲得頭銜：${a.title}`, desc:`${detail}\n\n你目前尚未裝備任何頭銜，因此系統已先將此頭銜作為目前人生身份。`, actions:[{label:"確認", onClick:()=>{setModal(null); checkOrNext();}}]});
+      return;
+    }
+    setModal({
+      title:`獲得新頭銜：${a.title}`,
+      desc:`${detail}\n\n是否要將這個新頭銜裝備為目前的人生身份？若先不裝備，它仍會保留在你的人生皮夾中，之後可隨時切換。`,
+      actions:[
+        {label:"裝備新頭銜", onClick:()=>{ setPlayers(prev=>prev.map((p,i)=>i===turn?{...p,equippedTitleId:title.id}:p)); setModal(null); setTimeout(checkOrNext,0); }},
+        {label:"先保留原頭銜", onClick:()=>{ setModal(null); checkOrNext(); }}
+      ]
+    });
   }
 
   function checkWin(p){
@@ -928,14 +942,19 @@ function App(){
     const owner=players[ownerIndex] || current;
     const equipped = owner?.equippedTitleId === t.id;
     const canEquip = ownerIndex === turn && !gameOver;
+    const backToList = () => showPlayerWallet(ownerIndex);
     setModal({
       title:`頭銜資訊｜${t.title}`,
-      desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n稀有度：${t.rarity || (t.tier===1?'普通':t.tier===2?'稀有':'傳奇')}\n來源：${t.career || '人生事件'}\n${t.salaryRaise?`實際效果：加薪 ${t.salaryRaise}`:"實際效果：依事件觸發而定"}\n${t.effects?.length?`加成：${t.effects.join('、')}`:"加成：無明顯加成"}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}\n\n${equipped?'目前裝備中。':canEquip?'你可以將此頭銜裝備為目前的人生身份。':'只能在該玩家回合切換頭銜。'}`,
+      desc:`${t.desc}\n\n階級：${t.tier===1?'初階':t.tier===2?'二階':'傳奇'}\n稀有度：${t.rarity || (t.tier===1?'普通':t.tier===2?'稀有':'傳奇')}\n來源：${t.career || '人生事件'}\n${t.salaryRaise?`實際效果：加薪 ${t.salaryRaise}`:"實際效果：依事件觸發而定"}\n${t.effects?.length?`加成：${t.effects.join('、')}`:"加成：無明顯加成"}\n${t.risks?.length?`風險：${t.risks.join('、')}`:"風險：無明顯風險"}\n${t.motto?`\n人生格言：${t.motto}`:""}\n\n${equipped?'目前裝備中。':canEquip?'你可以將此頭銜裝備為目前的人生身份。':'只能在該玩家回合切換頭銜。'}`,
       actions: equipped || !canEquip
-        ? [{label:"確認", onClick:()=>setModal(null)}]
+        ? [
+            {label:"返回頭銜列表", onClick:backToList},
+            {label:"關閉", onClick:()=>setModal(null)}
+          ]
         : [
             {label:"裝備此頭銜", onClick:()=>equipTitle(t.id, ownerIndex)},
-            {label:"先不切換", onClick:()=>setModal(null)}
+            {label:"返回頭銜列表", onClick:backToList},
+            {label:"關閉", onClick:()=>setModal(null)}
           ]
     });
   }
@@ -1000,7 +1019,7 @@ function App(){
 
 function CoinRain(){
   const coins=useMemo(()=>Array.from({length:36},(_,i)=>({id:i,left:Math.random()*100,delay:Math.random()*0.6,duration:1.1+Math.random()*0.9,size:22+Math.random()*18,spin:Math.random()>0.5?1:-1})),[]);
-  return <div className="coinRain" aria-hidden="true"><div className="salaryToast">💰 發薪日！</div>{coins.map(c=><span key={c.id} style={{left:`${c.left}%`,animationDelay:`${c.delay}s`,animationDuration:`${c.duration}s`,fontSize:`${c.size}px`,['--spin']:c.spin}}>🪙</span>)}</div>
+  return <div className="coinRain" aria-hidden="true"><div className="salaryToast">💰 發薪日！</div>{coins.map(c=><span className="coinDisc" key={c.id} style={{left:`${c.left}%`,animationDelay:`${c.delay}s`,animationDuration:`${c.duration}s`,width:`${c.size}px`,height:`${c.size}px`,['--spin']:c.spin}} />)}</div>
 }
 
 function AchievementPicker({choices, career, nextCount, onConfirm}){

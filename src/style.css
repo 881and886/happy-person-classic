@@ -4,3 +4,22 @@
 .achievementPicker{display:grid;gap:14px}.achievementChoices button.selected{border:4px solid #8b4f18;background:#fff0c8;box-shadow:0 0 0 4px #f3c45b55}.achievementConfirm{justify-content:flex-end;margin-top:6px}.mobileWalletTitles{display:grid;gap:8px;margin-top:12px;max-height:min(52vh,360px);overflow:auto;padding-right:4px}.mobileWalletTitles button{display:grid;text-align:left;gap:4px;background:#fff;border:2px solid #d0a45e;border-radius:14px}.mobileWalletTitles button.equipped{background:#6f3f15;color:#fff;border-color:#6f3f15}.mobileWalletTitles small{font-size:12px;opacity:.82}.walletOpenBtn{margin-top:8px;width:100%;font-size:13px;padding:8px 10px;background:#f2e1bc;border:1px solid #d0a45e}.playerCard.current .walletOpenBtn{background:#fff0c8;border-color:#8b4f18}
 
 @media(max-width:760px){.playerCard{font-size:18px}.walletOpenBtn{font-size:16px;padding:10px}.modalActions.achievementConfirm{justify-content:stretch}.modalActions.achievementConfirm button{width:100%;font-size:18px}.achievementChoices button{font-size:18px;padding:14px}.achievementChoices span{font-size:15px}.mobileWalletTitles button{font-size:18px;padding:12px}.mobileWalletTitles small{font-size:14px}}
+
+/* V3.1 responsive board and iOS coin fixes */
+.boardWrap{width:100%;display:flex;justify-content:center;align-items:flex-start;overflow:visible}
+.outerBoard{width:min(720px,calc(100vw - 24px))!important;height:auto!important;aspect-ratio:1/1;transform:none!important;margin:0 auto!important}
+.tile{width:15.55%;height:12.22%}
+.pos0{left:2.78%;top:2.78%}.pos1{left:19.44%;top:2.78%}.pos2{left:36.11%;top:2.78%}.pos3{left:52.78%;top:2.78%}.pos4{left:69.44%;top:2.78%}.pos5{left:81.67%;top:16.67%}.pos6{left:81.67%;top:30.56%}.pos7{left:81.67%;top:44.44%}.pos8{left:81.67%;top:58.33%}.pos9{left:81.67%;top:72.22%}.pos10{left:69.44%;top:85%}.pos11{left:52.78%;top:85%}.pos12{left:36.11%;top:85%}.pos13{left:19.44%;top:85%}.pos14{left:2.78%;top:85%}.pos15{left:2.78%;top:72.22%}.pos16{left:2.78%;top:58.33%}.pos17{left:2.78%;top:44.44%}.pos18{left:2.78%;top:30.56%}.pos19{left:2.78%;top:16.67%}
+.centerStage{left:20.83%;top:19.44%;width:58.33%;height:61.11%;overflow:hidden}
+.coinRain span.coinDisc{position:absolute;top:-60px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff8a8 0 12%,#ffd861 20%,#e5a928 56%,#a76610 100%);border:2px solid #8a520c;box-shadow:inset -3px -4px 0 #9b5d12,inset 3px 3px 0 #fff3a0,0 5px 9px #0004;animation:coinFall 1.6s linear forwards;filter:none!important}
+.coinRain span.coinDisc::after{content:"$";position:absolute;inset:0;display:grid;place-items:center;color:#7a4a08;font-weight:900;font-size:.62em;text-shadow:0 1px 0 #fff3a0}
+
+@media(max-width:980px){
+  .gameLayout{grid-template-columns:1fr}.outerBoard{width:min(680px,calc(100vw - 20px))!important;height:auto!important}.centerStage{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .app{padding:8px}.outerBoard{width:min(100vw - 12px,720px)!important;height:auto!important}.centerStage{grid-template-columns:1fr;overflow:auto;padding:0;gap:8px}.turnBox,.wallet{padding:8px;border-width:2px;border-radius:14px}.dice{font-size:38px;padding:6px;margin:6px 0}.wallet{max-height:100%;overflow:hidden}.titles{max-height:96px}.tile{font-size:10px;border-radius:10px}.tile b{font-size:20px}.tile small{line-height:1.05}.tokens em{font-size:14px}.topActions{gap:6px}.topActions button{padding:8px 10px}.supporterBox input{width:118px}
+}
+@media(max-width:520px){
+  .outerBoard{width:calc(100vw - 10px)!important;height:auto!important}.centerStage{left:20.83%;top:19.44%;width:58.33%;height:61.11%}.tile{font-size:9px}.tile b{font-size:18px}.tile span{font-size:9px}.tile small{font-size:9px}.turnBox h2{font-size:15px}.turnBox p,.wallet p{font-size:11px}.wallet h3,.wallet h4{font-size:13px}.titles button{font-size:10px;padding:4px 5px}.titles button small{font-size:9px}.playerCard{font-size:15px}
+}
