@@ -79,3 +79,75 @@
 .titleAlbum{display:grid;gap:12px;white-space:normal}.albumTabs{position:sticky;top:55px;z-index:7;background:#fff8e8;border:2px solid #d6ad66;border-radius:16px;padding:8px;display:flex;gap:6px;flex-wrap:wrap;box-shadow:0 8px 12px #fff8e8}.albumTabs button{border:1px solid #bd8e4e;background:#fffdf5;color:#5f3d17;border-radius:999px;padding:8px 10px;font-weight:900}.albumTabs button.active{background:#8b5a2b;color:#fff}.albumTabs button small{display:block;font-size:10px;opacity:.8}.titleCodex.paged{max-height:none;overflow:visible}.codexGroup{scroll-margin-top:120px}.codexCard{transition:transform .15s ease}.codexCard:hover{transform:translateY(-2px)}
 .titleDetail{display:grid;gap:12px;white-space:normal;text-align:left}.titleDetail section{background:#fffdf5;border:1px solid #e1c58f;border-radius:14px;padding:10px 12px}.titleDetail h3{margin:0 0 6px;color:#6f3f15;font-size:16px}.titleDetail p{margin:0;line-height:1.65}.titleDetail ul{margin:0;padding-left:1.2em;line-height:1.8}.mottoBlock blockquote{margin:4px 0 0;padding:10px 12px;border-left:5px solid #d6a23e;background:#fff4cf;border-radius:8px;font-weight:800;line-height:1.7}.equipHint{font-weight:900;color:#6f3f15;background:#fff3cd;border:1px dashed #d6ad66;border-radius:12px;padding:8px 10px}.feedbackPreview{background:#fffdf5;border:2px dashed #d0a45e;border-radius:16px;padding:14px;line-height:1.6}.collectionHint{background:#fff8dd;border:1px solid #e0b465;border-radius:12px;padding:8px 10px;font-weight:900;color:#6f3f15}.achievementChoices button em{display:inline-block;margin-top:6px;border-radius:999px;padding:3px 8px;font-size:12px;font-style:normal;font-weight:900}.achievementChoices button.newChoice em{background:#fff0a8;color:#7a4a08}.achievementChoices button.ownedChoice em{background:#eee;color:#777}.achievementChoices button.ownedChoice:not(.selected){opacity:.82}
 @media(max-width:760px){.modal{width:calc(100vw - 18px);max-height:84vh;padding-top:50px}.modal h2{font-size:20px;padding-right:48px}.modalClose{width:34px;height:34px;font-size:23px}.albumTabs{top:50px;gap:4px}.albumTabs button{font-size:12px;padding:7px 8px}.titleDetail section{padding:9px}.titleDetail h3{font-size:15px}}
+
+/* V3.6 modal stability, title-pick cleanup, mobile-safe dialogs */
+.modal{
+  display:flex!important;
+  flex-direction:column!important;
+  width:min(720px,94vw)!important;
+  max-height:min(88vh,820px)!important;
+  overflow:hidden!important;
+  padding:0!important;
+  white-space:normal!important;
+}
+.modalHeader{
+  flex:0 0 auto;
+  background:#fff8e8;
+  border-bottom:1px solid #e0c28a;
+  padding:18px 58px 12px 22px;
+}
+.modalHeader h2,
+.modal h2{
+  position:static!important;
+  top:auto!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+.modalBody{
+  flex:1 1 auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:14px 22px 18px;
+  min-height:0;
+  -webkit-overflow-scrolling:touch;
+}
+.modalActions{
+  flex:0 0 auto;
+  margin:0!important;
+  padding:12px 22px 16px;
+  border-top:1px solid #ead2a2;
+  background:#fff8e8;
+}
+.modalClose{
+  position:absolute!important;
+  top:14px!important;
+  right:16px!important;
+  float:none!important;
+  z-index:30!important;
+}
+.modalLocked .modalHeader{padding-right:22px}
+.modalLocked .modalActions:empty{display:none}
+.modalDesc{white-space:pre-line;line-height:1.75;margin:0 0 12px}
+.achievementPicker{gap:12px}
+.achievementChoices button em{letter-spacing:.02em}
+.achievementChoices button.ownedChoice em{background:#f0eadb;color:#5f4a2a}
+.achievementChoices button.newChoice em{background:#fff1a9;color:#7a4a08}
+.achievementChoices button.selected b{color:#5f3513}
+.achievementConfirm{padding:0!important;border-top:0!important;background:transparent!important;justify-content:flex-end!important}
+.achievementConfirm button{font-size:16px;padding:12px 18px}
+.collectionHint{line-height:1.55}
+.albumTabs{top:0!important;position:sticky;z-index:9}
+.titleAlbum .albumTabs{margin-bottom:8px}
+.releaseNotes,.titleAlbum,.titleDetail,.lifeLibrary{max-width:100%}
+@media(max-width:760px){
+  .modal{width:calc(100vw - 16px)!important;max-height:86vh!important;border-width:3px!important;border-radius:18px!important}
+  .modalHeader{padding:15px 52px 10px 16px}.modalHeader h2{font-size:20px!important;line-height:1.25}
+  .modalBody{padding:12px 16px 14px}.modalActions{padding:10px 16px 14px;gap:8px}
+  .modalActions button{flex:1 1 auto;min-width:0}
+  .modalClose{top:10px!important;right:12px!important}
+  .achievementChoices{grid-template-columns:1fr!important}
+  .albumTabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px!important}
+  .albumTabs button{border-radius:14px!important;min-height:44px}
+}
