@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V3.7.1 頭銜收藏冊相容性修正版";
+const VERSION = "V3.7.2 事件語意與人生感悟修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -40,6 +40,8 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+
+  {version:"V3.7.2 事件語意與人生感悟修正版", theme:"修正職業事件內容與結果方向不一致的問題，新增事件語意校正與人生感悟結語。", items:["新增事件語意校正器，避免冷藏庫故障、被雪藏、差評等負面事件仍給出不合理的全正向結果", "建立核心事件錨點：助學金、獎金、補助、贊助等事件會保證出現合理金錢收益", "重大犧牲／災難事件改為財富與快樂承受代價、名譽可能上升的壯烈結果", "事件結果不只看關鍵字，改採順境、逆境成長、成功代價、重大挫折、壯烈犧牲等類型平衡", "新增人生感悟結語，讓壞事也可能因成長、看清自己或獲得社群支持而帶來合理正向收穫", "結果顯示改為財富／快樂／名譽方向更清楚，降低玩家出戲感" ]},
 
   {version:"V3.7.1 頭銜收藏冊相容性修正版", theme:"修正 V3.6 舊頭銜升級後被新版240頭銜系統忽略的問題。", items:["新增經典頭銜 Legacy 分類，保留 V3.6 以前已取得但不在新版240頭銜中的收藏", "頭銜集卡冊改為顯示現代頭銜進度、經典頭銜數量與總收藏數", "舊頭銜不再被刪除或覆蓋，將以📜經典頭銜形式保存", "曾擁有舊頭銜的玩家可獲得限定紀念頭銜：幸福人先驅者", "幸福人先驅者為舊版本參與者紀念，不列入新版240頭銜池" ]},
 
@@ -12352,6 +12354,79 @@ function createPlayer(name, animal, target){
   };
 }
 
+
+function eventBaseCash(ev){
+  const level = ev?.eventLevel || "普通";
+  if(level === "傳奇" || level === "命運") return 1200;
+  if(level === "稀有") return 700;
+  return 350;
+}
+function hasAny(text, words){ return words.some(w=>text.includes(w)); }
+function appendInsight(desc, insight){
+  if(!insight || String(desc||"").includes("💭")) return desc || "";
+  return `${desc}
+
+💭 ${insight}`;
+}
+function normalizeEventOutcome(ev){
+  if(!ev || ev._normalizedOutcome) return ev;
+  const text = `${ev.title||""} ${ev.desc||""}`;
+  let cash = Number(ev.cash)||0;
+  let happiness = Number(ev.happiness)||0;
+  let reputation = Number(ev.reputation)||0;
+  let insight = "";
+  const base = eventBaseCash(ev);
+  const catastrophicWords = ["全滅","沉沒","陣亡","死亡","殉國","覆滅","滅亡","自爆","罹難","犧牲","喪生"];
+  const moneyGainWords = ["助學金","獎助學金","獎學金","獎金","補助","贊助","贊助人","投資款","融資","募資","分紅","票房大賣","豐收","大豐收","得標","合約","訂單","收益","獲利","收入","承包","中獎"];
+  const moneyLossWords = ["故障","壞掉","腐爛","黑煙","罰款","賠償","失竊","偷走","虧損","倒閉","破產","維修","損失","燒毀","坍方","沉沒","爆炸","停擺","延誤","斷裂","洩漏"];
+  const reputationLossWords = ["投訴","惡評","差評","水軍","灌爆","炎上","醜聞","雪藏","封殺","罵聲","聯署","抱怨","爭議","失言"];
+  const happinessLossWords = ["故障","壞掉","腐爛","惡臭","黑煙","受傷","疾病","生病","崩潰","失敗","錯過","失竊","壓力","孤獨","迷航","危機","事故","投訴"];
+  const successWords = ["成功","突破","發現","得獎","獲獎","表揚","入選","獲選","受邀","掌聲","感謝","救援成功","逆轉","大賣","爆紅","完成"];
+  const adversityWords = [...moneyLossWords, ...reputationLossWords, ...happinessLossWords, "拒絕", "被拒", "低潮", "失落", "雪藏"];
+  const isCatastrophic = hasAny(text, catastrophicWords);
+  const hasMoneyGain = hasAny(text, moneyGainWords);
+  const hasMoneyLoss = hasAny(text, moneyLossWords);
+  const hasRepLoss = hasAny(text, reputationLossWords);
+  const hasHappyLoss = hasAny(text, happinessLossWords);
+  const hasSuccess = hasAny(text, successWords);
+  const hasAdversity = hasAny(text, adversityWords);
+  if(isCatastrophic){
+    cash = cash > 0 ? -Math.abs(cash) : (cash || -base*2);
+    happiness = happiness > 0 ? -Math.max(2, happiness) : (happiness || -3);
+    reputation = Math.max(reputation, 3);
+    insight = "這不是單純的勝利，而是一段被代價刻進歷史的壯烈記憶。你失去了許多，卻也讓名字被後人記住。";
+  } else if(hasMoneyGain){
+    if(cash <= 0) cash = base;
+    if(happiness <= 0) happiness = Math.max(happiness, 1);
+    insight = "這筆資源沒有讓人生從此無憂，卻像一場及時雨，讓你能繼續往前走。";
+  } else if(hasAdversity){
+    if(hasMoneyLoss && cash > 0) cash = -Math.abs(cash);
+    if(hasMoneyLoss && cash === 0) cash = -Math.round(base*0.7);
+    if(hasRepLoss && reputation > 0) reputation = -Math.abs(reputation);
+    if(hasRepLoss && reputation === 0) reputation = -1;
+    if(hasHappyLoss && happiness > 1) happiness = 1;
+    if(happiness === 0 && (hasRepLoss || hasMoneyLoss)) happiness = 1;
+    if(/雪藏|封殺|水軍|灌爆|差評|惡評/.test(text)){
+      if(cash > 0) cash = -Math.abs(cash);
+      if(reputation > 0) reputation = -Math.abs(reputation);
+      happiness = Math.max(happiness, 1);
+      insight = "你失去了一些外在掌聲，卻也第一次學會把別人的評價與自己的價值分開。";
+    } else if(/投訴|惡臭|抱怨|聯署/.test(text)){
+      insight = "這次尷尬讓你明白，專業不只在技術裡，也在和人好好溝通的能力裡。";
+    } else if(/故障|壞掉|黑煙|維修|損失|腐爛/.test(text)){
+      insight = "雖然付出了代價，但你也因此學會更早準備、更細心照看那些容易被忽略的環節。";
+    } else {
+      insight = "這不是一個順利的月份，但它讓你多了一點經驗，也多了一點重新站穩的能力。";
+    }
+  } else if(hasSuccess){
+    if(cash < 0) cash = Math.abs(cash);
+    if(happiness < 0) happiness = Math.abs(happiness) || 1;
+    if(reputation < 0) reputation = Math.abs(reputation) || 1;
+    insight = "順利不只是運氣，也來自先前那些沒被看見的準備。";
+  }
+  return {...ev, cash, happiness, reputation, desc: appendInsight(ev.desc, insight), _normalizedOutcome:true};
+}
+
 function applyEffect(player, effect){
   const p={...player};
   const adj=adjustedEffect(player,effect);
@@ -12615,16 +12690,19 @@ function App(){
   }
 
   function applyEvent(ev, source){
+    const resolvedEvent = normalizeEventOutcome(ev);
     updateCurrent(p=>{
-      let np=applyEffect(p, ev);
+      let np=applyEffect(p, resolvedEvent);
       const age=np.ageMonths;
-      const logItem={ageMonths:age,title:ev.title,desc:ev.desc,type:source,important:!!ev.important || !!ev.rare};
+      const logItem={ageMonths:age,title:resolvedEvent.title,desc:resolvedEvent.desc,type:source,important:!!resolvedEvent.important || !!resolvedEvent.rare};
       np.lifeLog=[...np.lifeLog, logItem];
       return np;
     });
     setModal({
-      title:`${source}｜${ev.title}`,
-      desc:`${ev.desc}\n\n${effectText(ev)}`,
+      title:`${source}｜${resolvedEvent.title}`,
+      desc:`${resolvedEvent.desc}
+
+${effectText(resolvedEvent)}`,
       actions:[{label:"確認", onClick:()=>{setModal(null); checkOrNext();}}]
     });
   }
@@ -12632,7 +12710,7 @@ function App(){
   function effectText(ev, player){
     const adj=adjustedEffect(player||current, ev);
     const arr=[];
-    if(ev.cash) arr.push(`金錢變化：${money(adj.cash)}`);
+    if(ev.cash) arr.push(`財富 ${adj.cash>0?'+':''}${money(adj.cash)}`);
     if(ev.happiness) arr.push(`快樂 ${adj.happiness>0?'+':''}${adj.happiness}`);
     if(ev.reputation) arr.push(`名譽 ${adj.reputation>0?'+':''}${adj.reputation}`);
     return arr.length?arr.join("｜"):"沒有直接數值變化。";
