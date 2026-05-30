@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V3.7 頭銜宇宙與職業事件整合版";
+const VERSION = "V3.7.1 頭銜收藏冊相容性修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -40,6 +40,8 @@ const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"]
 const careers = ["學院", "農墾", "企業", "航海", "月球探險", "電影明星", "從政", "開礦"];
 
 const releaseNotes = [
+
+  {version:"V3.7.1 頭銜收藏冊相容性修正版", theme:"修正 V3.6 舊頭銜升級後被新版240頭銜系統忽略的問題。", items:["新增經典頭銜 Legacy 分類，保留 V3.6 以前已取得但不在新版240頭銜中的收藏", "頭銜集卡冊改為顯示現代頭銜進度、經典頭銜數量與總收藏數", "舊頭銜不再被刪除或覆蓋，將以📜經典頭銜形式保存", "曾擁有舊頭銜的玩家可獲得限定紀念頭銜：幸福人先驅者", "幸福人先驅者為舊版本參與者紀念，不列入新版240頭銜池" ]},
 
   {version:"V3.7 頭銜宇宙與職業事件整合版", theme:"導入240頭銜、595事件、24格職業內圈、事業轉折點與流星雨演出。", items:["八大職業正式導入240個頭銜，每職業30個：普通15、二階8、菁英4、命運3", "頭銜屬性改為加成倍率，1點等於5%收益加成", "職業內圈統一改為24格，第24格為完成職業，經過或停留皆可觸發", "第1次完成職業只抽普通；第2次開放二階；第3次開放菁英；第4次以上開放命運頭銜", "導入595筆職業事件，統一分類為普通、稀有、傳奇、命運", "事業轉折點正式定案：可選擇回到職業起點重新出發", "命運頭銜提升稀有／傳奇事件機率", "流星雨之夜加入選項、流星雨特效與 star-rain.mp3 音效"]},
 
@@ -12145,6 +12147,12 @@ function equippedTitle(player){
 }
 function modsOf(player){
   const base={...(equippedTitle(player)?.modifiers || {})};
+  try{
+    const codex=JSON.parse(localStorage.getItem("titleCodex")||"[]");
+    if((codex||[]).some(isFounderTitle)){
+      base.legendaryEventPct=(Number(base.legendaryEventPct)||0)+5;
+    }
+  }catch(e){}
   const eq=equippedTitle(player);
   if(eq?.tier===4 || eq?.rarity==="隱藏"){
     base.rareEventPct=(Number(base.rareEventPct)||0)+10;
@@ -12262,6 +12270,48 @@ function flattenTitlePools(){
     });
   });
   return out;
+}
+function modernTitleKeySet(){ return new Set(flattenTitlePools().map(t=>`${t.career}-${t.title}`)); }
+function isFounderTitle(x){ return (x?.title||"") === "幸福人先驅者"; }
+function migrateLegacyCodexRecords(records=[]){
+  const modernKeys=modernTitleKeySet();
+  let foundLegacy=false;
+  const normalized=(records||[]).filter(Boolean).map(x=>{
+    const key=`${x.career||""}-${x.title||""}`;
+    if(modernKeys.has(key) || isFounderTitle(x)) return x;
+    foundLegacy=true;
+    return {
+      ...x,
+      legacy:true,
+      originalCareer:x.originalCareer || x.career || "經典",
+      rarity:x.rarity || "經典",
+      tier:x.tier || 0,
+      motto:x.motto || "在世界尚未完成時，你已經開始探索。",
+      desc:x.desc || "這是舊版本留下的經典頭銜，記錄著幸福人早期的人生痕跡。"
+    };
+  });
+  if(foundLegacy && !normalized.some(isFounderTitle)){
+    normalized.unshift({
+      title:"幸福人先驅者",
+      career:"經典",
+      legacy:true,
+      founder:true,
+      rarity:"隱藏",
+      tier:4,
+      firstAge:"版本升級紀念",
+      desc:"在《幸福人》世界尚未完成時，你已經開始探索。",
+      motto:"在世界尚未完成時，你已經開始探索。",
+      modifiers:{ legendaryEventPct:5 },
+      unlockedAt:new Date().toISOString()
+    });
+  }
+  const seen=new Set();
+  return normalized.filter(x=>{
+    const k=`${x.legacy?'legacy':'modern'}-${x.career||''}-${x.title||''}`;
+    if(seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 function deepCareerTitle(career, player, nextCount){ return null; }
 function ageText(ageMonths){
@@ -12398,7 +12448,8 @@ function App(){
   useEffect(()=>{ playersRef.current=players; },[players]);
   useEffect(()=>{
     setTitleCodex(prev=>{
-      const next=(prev||[]).map(x=>({...x, tierName:x.tier===3?"菁英":x.tierName, desc:syncNarrativeNaming(x.desc||""), motto:syncNarrativeNaming(x.motto||"")}));
+      const cleaned=(prev||[]).map(x=>({...x, tierName:x.tier===3?"菁英":x.tierName, desc:syncNarrativeNaming(x.desc||""), motto:syncNarrativeNaming(x.motto||"")}));
+      const next=migrateLegacyCodexRecords(cleaned);
       localStorage.setItem("titleCodex", JSON.stringify(next));
       return next;
     });
@@ -13077,19 +13128,30 @@ ${deepAdded.motto?`人生格言：${deepAdded.motto}`:""}`:""}`;
 
 
   function showTitleCodex(selectedCareer="全部"){
-    const unlocked=titleCodex || [];
-    const unlockedMap=new Map(unlocked.map(x=>[`${x.career}-${x.title}`,x]));
+    const raw=titleCodex || [];
+    const modernKeys=modernTitleKeySet();
+    const unlocked=migrateLegacyCodexRecords(raw);
+    if(JSON.stringify(raw)!==JSON.stringify(unlocked)){
+      localStorage.setItem("titleCodex", JSON.stringify(unlocked));
+      setTitleCodex(unlocked);
+    }
+    const isModernRec=(x)=>modernKeys.has(`${x.career}-${x.title}`);
+    const modernRecords=unlocked.filter(isModernRec);
+    const legacyRecords=unlocked.filter(x=>!isModernRec(x));
+    const unlockedMap=new Map(modernRecords.map(x=>[`${x.career}-${x.title}`,x]));
     const all=flattenTitlePools();
-    const groups=careers.map(c=>({career:c, titles:all.filter(t=>t.career===c)}));
+    const groups=careers.map(c=>({career:c, titles:all.filter(t=>t.career===c), legacy:legacyRecords.filter(x=>(x.originalCareer||x.career)===c)}));
+    const orphanLegacy=legacyRecords.filter(x=>!careers.includes(x.originalCareer||x.career));
     const total=all.length;
     const unlockedTotal=all.filter(t=>unlockedMap.has(`${t.career}-${t.title}`)).length;
     const visibleGroups=selectedCareer==="全部"?groups:groups.filter(g=>g.career===selectedCareer);
+    const showOrphanLegacy=selectedCareer==="全部" && orphanLegacy.length>0;
     setModal({
       title:"🏆 頭銜集卡冊",
-      desc:`總進度 ${unlockedTotal}/${total}。已解鎖頭銜會顯示完整資訊，未解鎖頭銜只保留模糊提示。`,
+      desc:`現代頭銜 ${unlockedTotal}/${total}｜📜經典頭銜 ${legacyRecords.length}｜總收藏 ${unlockedTotal + legacyRecords.length}。舊版本頭銜會以經典頭銜保存，不會覆蓋新版240頭銜。`,
       custom:<div className="titleAlbum">
-        <div className="albumTabs"><button className={selectedCareer==="全部"?'active':''} onClick={()=>showTitleCodex('全部')}>全部</button>{careers.map(c=>{const g=groups.find(x=>x.career===c); const n=g.titles.filter(t=>unlockedMap.has(`${c}-${t.title}`)).length; return <button key={c} className={selectedCareer===c?'active':''} onClick={()=>showTitleCodex(c)}>{c}<small>{n}/{g.titles.length}</small></button>})}</div>
-        <div className="titleCodex paged">{visibleGroups.map(g=><section key={g.career} className="codexGroup"><h3>{g.career}｜已解鎖 {g.titles.filter(t=>unlockedMap.has(`${g.career}-${t.title}`)).length}/{g.titles.length}</h3><div className="codexGrid">{g.titles.map(t=>{const rec=unlockedMap.get(`${g.career}-${t.title}`); const open=!!rec; return <div key={t.title} className={`codexCard ${open?rarityClass(t.rarity):"locked"}`}><span className="starBadge">{open?rarityStars(t.rarity):"？"}</span><b>{open?t.title:"？？？"}</b><small>{open?`${displayRarity(t.rarity)}｜${titleTierText(t)}`:"尚未理解的人生"}</small><p>{open?(t.motto || t.desc):"有人曾在這條道路上走得更深，留下了尚未被你理解的人生痕跡。"}</p>{open&&rec.firstAge?<em>首次取得：{rec.firstAge}</em>:null}</div>})}</div></section>)}</div>
+        <div className="albumTabs"><button className={selectedCareer==="全部"?'active':''} onClick={()=>showTitleCodex('全部')}>全部<small>{unlockedTotal}/{total}+📜{legacyRecords.length}</small></button>{careers.map(c=>{const g=groups.find(x=>x.career===c); const n=g.titles.filter(t=>unlockedMap.has(`${c}-${t.title}`)).length; const legacyN=g.legacy.length; return <button key={c} className={selectedCareer===c?'active':''} onClick={()=>showTitleCodex(c)}>{c}<small>{n}/{g.titles.length}{legacyN?`＋📜${legacyN}`:""}</small></button>})}</div>
+        <div className="titleCodex paged">{visibleGroups.map(g=><section key={g.career} className="codexGroup"><h3>{g.career}｜現代頭銜 {g.titles.filter(t=>unlockedMap.has(`${g.career}-${t.title}`)).length}/{g.titles.length}{g.legacy.length?`｜📜經典 ${g.legacy.length}`:""}</h3>{g.legacy.length?<div className="codexLegacyList"><h4>📜 經典頭銜</h4><div className="codexGrid legacyGrid">{g.legacy.map(t=><div key={`legacy-${t.title}`} className="codexCard legacy"><span className="starBadge">📜</span><b>{t.title}</b><small>經典頭銜｜舊版本收藏</small><p>{t.motto || t.desc || "這是舊版本留下的經典頭銜，記錄著幸福人早期的人生痕跡。"}</p>{t.firstAge?<em>首次取得：{t.firstAge}</em>:null}</div>)}</div></div>:null}<div className="codexGrid">{g.titles.map(t=>{const rec=unlockedMap.get(`${g.career}-${t.title}`); const open=!!rec; return <div key={t.title} className={`codexCard ${open?rarityClass(t.rarity):"locked"}`}><span className="starBadge">{open?rarityStars(t.rarity):"？"}</span><b>{open?t.title:"？？？"}</b><small>{open?`${displayRarity(t.rarity)}｜${titleTierText(t)}`:"尚未理解的人生"}</small><p>{open?(t.motto || t.desc):"有人曾在這條道路上走得更深，留下了尚未被你理解的人生痕跡。"}</p>{open&&rec.firstAge?<em>首次取得：{rec.firstAge}</em>:null}</div>})}</div></section>)}{showOrphanLegacy?<section className="codexGroup legacyGroup"><h3>📜 其他經典頭銜｜{orphanLegacy.length}</h3><div className="codexGrid legacyGrid">{orphanLegacy.map(t=><div key={`orphan-${t.title}`} className="codexCard legacy"><span className="starBadge">{isFounderTitle(t)?"🏅":"📜"}</span><b>{t.title}</b><small>{isFounderTitle(t)?"限定紀念頭銜":"經典頭銜｜舊版本收藏"}</small><p>{t.motto || t.desc || "這是舊版本留下的經典頭銜，記錄著幸福人早期的人生痕跡。"}</p>{t.firstAge?<em>首次取得：{t.firstAge}</em>:null}</div>)}</div></section>:null}</div>
       </div>,
       actions:[{label:"關閉", onClick:()=>setModal(null)}]
     });
