@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
-const VERSION = "V3.7.2 事件語意與人生感悟修正版";
+const VERSION = "V3.7.3 表單預填與流星測試修正版";
 const STARTING_CASH = 5000;
 const START_AGE_MONTHS = 18 * 12;
 const MAX_AGE_MONTHS = 100 * 12;
@@ -17,23 +17,24 @@ const MAIN_BGM = "/bgm.wav";
 
 const FEEDBACK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfadUBnuJv4SXEo6QoalzRqGDX5V-KulWz7x6rBWLcq_PZcUw/viewform";
 const FEEDBACK_ENTRIES = {
-  playerName: "entry.129605564",
-  lifeId: "entry.1106737648",
-  gameVersion: "entry.1205632976",
-  lifeType: "entry.211790992",
-  mainTitle: "entry.1709456881",
-  achievementAge: "entry.232703430",
-  wealth: "entry.990235420",
-  happiness: "entry.1022010614",
-  fame: "entry.261787525",
-  favoritePart: "entry.1463652126",
-  improvement: "entry.445014700",
-  mostImpressiveCareer: "entry.1452324522",
-  mostImpressiveTitle: "entry.619547856",
-  playAgain: "entry.1581778550",
-  messageToAuthor: "entry.1575234988",
-  messageToNextPlayer: "entry.1224188089",
-  extraNote: "entry.1755803895"
+  systemInfo: "entry.129605564",
+  playerName: "entry.1106737648",
+  lifeId: "entry.1205632976",
+  gameVersion: "entry.211790992",
+  lifeType: "entry.1709456881",
+  mainTitle: "entry.232703430",
+  achievementAge: "entry.990235420",
+  wealth: "entry.1022010614",
+  happiness: "entry.261787525",
+  fame: "entry.1463652126",
+  favoritePart: "entry.445014700",
+  improvement: "entry.1936442200",
+  mostImpressiveCareer: "entry.908418579",
+  mostImpressiveTitle: "entry.1452324522",
+  playAgain: "entry.619547856",
+  messageToAuthor: "entry.1581778550",
+  messageToNextPlayer: "entry.1575234988",
+  extraNote: "entry.1224188089"
 };
 
 const animals = ["🐱", "🐶", "🦊", "🐼", "🐧", "🐸", "🦁", "🐰"];
@@ -12378,9 +12379,9 @@ function normalizeEventOutcome(ev){
   const base = eventBaseCash(ev);
   const catastrophicWords = ["全滅","沉沒","陣亡","死亡","殉國","覆滅","滅亡","自爆","罹難","犧牲","喪生"];
   const moneyGainWords = ["助學金","獎助學金","獎學金","獎金","補助","贊助","贊助人","投資款","融資","募資","分紅","票房大賣","豐收","大豐收","得標","合約","訂單","收益","獲利","收入","承包","中獎"];
-  const moneyLossWords = ["故障","壞掉","腐爛","黑煙","罰款","賠償","失竊","偷走","虧損","倒閉","破產","維修","損失","燒毀","坍方","沉沒","爆炸","停擺","延誤","斷裂","洩漏"];
-  const reputationLossWords = ["投訴","惡評","差評","水軍","灌爆","炎上","醜聞","雪藏","封殺","罵聲","聯署","抱怨","爭議","失言"];
-  const happinessLossWords = ["故障","壞掉","腐爛","惡臭","黑煙","受傷","疾病","生病","崩潰","失敗","錯過","失竊","壓力","孤獨","迷航","危機","事故","投訴"];
+  const moneyLossWords = ["故障","壞掉","腐爛","黑煙","罰款","賠償","失竊","偷走","虧損","倒閉","破產","維修","損失","燒毀","坍方","沉沒","爆炸","停擺","延誤","斷裂","洩漏","酸雨","侵蝕","投毒","污染","中毒","認證被","惡意","蓄意破壞","偷噴","焦黃","病斑","枯萎"];
+  const reputationLossWords = ["投訴","惡評","差評","水軍","灌爆","炎上","醜聞","雪藏","封殺","罵聲","聯署","抱怨","爭議","失言","認證被","惡意投毒","造假","污染","抹黑"];
+  const happinessLossWords = ["故障","壞掉","腐爛","惡臭","黑煙","受傷","疾病","生病","崩潰","失敗","錯過","失竊","壓力","孤獨","迷航","危機","事故","投訴","酸雨","侵蝕","投毒","惡意","污染","中毒","焦黃","病斑","枯萎"];
   const successWords = ["成功","突破","發現","得獎","獲獎","表揚","入選","獲選","受邀","掌聲","感謝","救援成功","逆轉","大賣","爆紅","完成"];
   const adversityWords = [...moneyLossWords, ...reputationLossWords, ...happinessLossWords, "拒絕", "被拒", "低潮", "失落", "雪藏"];
   const isCatastrophic = hasAny(text, catastrophicWords);
@@ -12390,7 +12391,22 @@ function normalizeEventOutcome(ev){
   const hasHappyLoss = hasAny(text, happinessLossWords);
   const hasSuccess = hasAny(text, successWords);
   const hasAdversity = hasAny(text, adversityWords);
-  if(isCatastrophic){
+  const hasPreparation = /提前|防護|預警|監測|準備|保險|備援|防災|留存|備份/.test(text);
+  if(/酸雨|侵蝕|病斑|焦黃|枯萎/.test(text) && !hasPreparation){
+    cash = cash > 0 ? -Math.abs(cash) : (cash || -Math.round(base*0.8));
+    happiness = happiness > 0 ? -Math.min(2, happiness) : (happiness || -1);
+    insight = "天候與環境從不保證公平，這次損失提醒你：農業的韌性不只在土地，也在風險準備裡。";
+  } else if(/投毒|惡意|蓄意破壞|偷噴|認證被/.test(text) && !/曝光|監視器|抓到|起訴|媒體|澄清|支持/.test(text)){
+    cash = cash > 0 ? -Math.abs(cash) : (cash || -base);
+    happiness = happiness > 0 ? -1 : (happiness || -1);
+    reputation = reputation > 0 ? -Math.min(2, reputation) : (reputation || -1);
+    insight = "這次打擊讓你明白，經營不只要面對自然，也要面對人心。真正的信任，需要時間重新證明。";
+  } else if(/投毒|惡意|蓄意破壞|偷噴|認證被/.test(text)){
+    cash = cash > 0 ? -Math.abs(cash) : (cash || -Math.round(base*0.8));
+    happiness = Math.max(happiness, 1);
+    reputation = Math.max(reputation, 2);
+    insight = "事件曝光後，支持者反而更加看見你的堅持。你失去了一些作物，卻守住了誠信。";
+  } else if(isCatastrophic){
     cash = cash > 0 ? -Math.abs(cash) : (cash || -base*2);
     happiness = happiness > 0 ? -Math.max(2, happiness) : (happiness || -3);
     reputation = Math.max(reputation, 3);
@@ -12596,6 +12612,33 @@ function App(){
       audio.play().catch(()=>{});
     }
     setTimeout(()=>setShowCoinRain(false),1800);
+  }
+
+  function triggerStarEvent(testMode=false){
+    setShowStarRain(true);
+    if(sfx){
+      const audio=new Audio(STAR_SOUND);
+      audio.volume=0.75;
+      audio.play().catch(()=>{});
+    }
+    setTimeout(()=>setShowStarRain(false),10500);
+    const wishOptions=[
+      {key:"wealth", label:"許下財富願望", text:"你希望未來的道路能多一點資源，讓重要的選擇不再只被金錢限制。", blessing:"財富運勢提升"},
+      {key:"happiness", label:"許下快樂願望", text:"你希望在漫長的人生裡，仍保有感受美好與重新微笑的能力。", blessing:"快樂運勢提升"},
+      {key:"reputation", label:"許下名譽願望", text:"你希望自己的努力能被看見，也希望留下值得被記住的痕跡。", blessing:"名譽運勢提升"}
+    ];
+    const chooseWish=(w)=>{
+      updateCurrent(p=>({...p, starBlessing:{type:w.key, months:12, label:w.blessing}, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:"流星雨之夜",desc:`${w.text} 那一晚之後，你感覺未來的道路多了一些可能。`,type:"star",important:true}]}));
+      addLog(`🌠 ${displayName(current)} 獲得${w.blessing}`);
+      setModal({title:`🌠 ${w.blessing}`, desc:`${w.text}
+
+那顆流星似乎記住了你的願望。未來一段時間，相關的正向事件會更容易靠近你。`, actions:[{label:"確認", onClick:()=>{setModal(null); if(!testMode) nextTurn();}}]});
+    };
+    setModal({
+      title:"🌠 流星雨之夜",
+      desc:"一場難得的流星雨劃過夜空。你站在夜色裡，忽然覺得人生仍有許多尚未被打開的可能。",
+      actions:wishOptions.map(w=>({label:w.label, onClick:()=>chooseWish(w)})).concat([{label:"只是靜靜看著", onClick:()=>{setModal({title:"🌠 靜望流星", desc:"你沒有許願，只是安靜地看著光從夜空落下。這一刻本身，已經足夠被記住。", actions:[{label:"確認", onClick:()=>{setModal(null); if(!testMode) nextTurn();}}]});}}])
+    });
   }
 
   async function rollDice(){
@@ -13030,6 +13073,10 @@ ${deepAdded.motto?`人生格言：${deepAdded.motto}`:""}`:""}`;
       savedAt:new Date().toISOString(),
       mainTitle:equipped?.title || "人生旅人",
       mainCareer:Object.entries(p.careerCounts||{}).sort((a,b)=>b[1]-a[1])[0]?.[0] || "人生",
+      wealth:clampWealthCash(p.cash),
+      cash:p.cash,
+      happiness:p.happiness,
+      reputation:p.reputation,
       motto:mottoMatch?.[1] || "這段人生已被寫下。",
       reason,
       autobiography:syncNarrativeNaming(text)
@@ -13174,6 +13221,7 @@ ${deepAdded.motto?`人生格言：${deepAdded.motto}`:""}`:""}`;
     const p = endingRecord || (current ? makeLifeBookRecord(current, gameOver ? '人生結算' : '遊戲中回饋', autobiography || '') : null);
     const params = new URLSearchParams({usp:'pp_url'});
     if(p){
+      params.set(FEEDBACK_ENTRIES.systemInfo, '000');
       params.set(FEEDBACK_ENTRIES.playerName, p.playerName || '');
       params.set(FEEDBACK_ENTRIES.lifeId, p.id || uid());
       params.set(FEEDBACK_ENTRIES.gameVersion, VERSION);
@@ -13186,6 +13234,7 @@ ${deepAdded.motto?`人生格言：${deepAdded.motto}`:""}`:""}`;
       params.set(FEEDBACK_ENTRIES.mostImpressiveTitle, p.mainTitle || '');
       params.set(FEEDBACK_ENTRIES.extraNote, `自動帶入：${p.playerName||''}｜${p.lifeType||''}｜${p.age||''}｜${p.mainTitle||''}`);
     }else{
+      params.set(FEEDBACK_ENTRIES.systemInfo, '000');
       params.set(FEEDBACK_ENTRIES.gameVersion, VERSION);
     }
     return `${FEEDBACK_FORM_URL}?${params.toString()}`;
@@ -13248,7 +13297,7 @@ ${deepAdded.motto?`人生格言：${deepAdded.motto}`:""}`:""}`;
 
   if(screen==="autobiography") return <div className="app endingPage"><h1>📖 人生結局</h1><pre className="autobio">{autobiography}</pre><div className="endingActions"><button className="primary" onClick={downloadTxt}>下載人生自傳 .txt</button><button onClick={collectCurrentLife}>📚 收藏這段人生</button><button onClick={showSupportModal}>💖 贊助支持</button><button onClick={showFeedbackModal}>💬 回饋作者</button><button onClick={restartGame}>🔄 重玩一次</button></div><section className="supportPanel"><div><h2>🌱 支持幸福人計畫</h2><p>如果你喜歡這段人生旅程，歡迎贊助 100 元支持《幸福人》的持續開發。</p><p>你的支持，將成為更多人生故事誕生的力量。</p></div><img src="/support_qr.jpg" onError={e=>{e.currentTarget.style.display='none'}} alt="支持幸福人 QR Code"/></section>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 
-  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}{showStarRain&&<StarRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={showReleaseNotes}>📜 更新日誌</button><button onClick={showTitleCodex}>🏆 頭銜收藏冊</button><button onClick={showLifeLibrary}>📚 人生藏書館</button><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter||starSupporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox compactTurn"><div className="turnHeader"><div><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p></div><button className="primary inlineRoll" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button></div><div className="dice">{dice?dice.total:"🎲"}</div><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${(current.careerLayout||careerBoards[current.career]).length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} title="點擊查看頭銜屬性或裝備" className={`${rarityClass(t.rarity)} ${t.id===current.equippedTitleId?'equipped':''}`} onClick={()=>titleInfo(t)}><span className="starBadge">{rarityStars(t.rarity)}</span>{t.id===current.equippedTitleId?'✓ ':''}{t.title}<small>{titleTierText(t)}｜{displayRarity(t.rarity)}</small></button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${rarityClass(equippedTitle(p)?.rarity)} ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${(p.careerLayout||careerBoards[p.career]).length}`:`外圈 ${p.outerPos}`}</p><button className="walletOpenBtn" onClick={()=>showPlayerWallet(i)}>查看人生皮夾／頭銜</button></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
+  return <div className="app"><audio ref={mainAudioRef} src={MAIN_BGM}/><audio ref={careerAudioRef} src={CAREER_BGM}/>{showCoinRain&&<CoinRain/>}{showStarRain&&<StarRain/>}<header><h1>幸福人 Classic <span>{VERSION}</span></h1><div className="topActions"><button onClick={showReleaseNotes}>📜 更新日誌</button><button onClick={showTitleCodex}>🏆 頭銜收藏冊</button><button onClick={showLifeLibrary}>📚 人生藏書館</button><button onClick={()=>setMusic(!music)}>{music?'🔊 音樂開':'🔇 音樂關'}</button><button onClick={()=>setSfx(!sfx)}>{sfx?'🔔 音效開':'🔕 音效關'}</button><button onClick={()=>triggerStarEvent(true)}>🧪 測試流星</button><div className="supporterBox"><input placeholder="支持者序號" value={supporterInput} onChange={e=>setSupporterInput(e.target.value)}/><button onClick={unlockSupporter}>{supporter||starSupporter?'🌟 已啟用':'啟用特效'}</button></div></div><div className="topLog"><b>Recent Log</b>{logs.slice(0,3).map((l,i)=><p key={i}>{l}</p>)}</div></header><main className="gameLayout"><section className="boardWrap"><div className="outerBoard">{outerBoard.map((tile,i)=><div key={tile.id} className={`tile pos${i} ${boardTile?.id===tile.id?'active':''}`}><span>{i}</span><b>{tile.icon}</b><small>{tile.name}</small><div className="tokens">{players.filter(p=>!p.career&&p.outerPos===i).map(p=><em key={p.id}>{p.animal}</em>)}</div></div>)}<div className="centerStage"><div className="turnBox compactTurn"><div className="turnHeader"><div><h2>{current?.animal} {current&&displayName(current)}</h2><p>{current&&ageText(current.ageMonths)}｜{current&&stageOf(current.ageMonths)}</p></div><button className="primary inlineRoll" disabled={moving||gameOver} onClick={rollDice}>{moving?"移動中":"擲骰"}</button></div><div className="dice">{dice?dice.total:"🎲"}</div><p>{current?.career?`目前在${current.career}內圈，使用單骰。進度 ${(current.careerProgress||0)}/${(current.careerLayout||careerBoards[current.career]).length}`:"外圈人生道路，使用雙骰。"}</p></div><div className="wallet"><h3>人生皮夾</h3><p>現金：{current&&money(current.cash)}</p><p>薪水：{current&&money(current.salary)}</p><p>財富：{wealthScore}｜快樂：{current?.happiness}｜名譽：{current?.reputation}</p><p>目標：{current?.target.wealth}/{current?.target.happiness}/{current?.target.reputation}</p><h4>頭銜</h4><div className="titles">{current?.titles.length?current.titles.map(t=><button key={t.id} title="點擊查看頭銜屬性或裝備" className={`${rarityClass(t.rarity)} ${t.id===current.equippedTitleId?'equipped':''}`} onClick={()=>titleInfo(t)}><span className="starBadge">{rarityStars(t.rarity)}</span>{t.id===current.equippedTitleId?'✓ ':''}{t.title}<small>{titleTierText(t)}｜{displayRarity(t.rarity)}</small></button>):<span>尚無頭銜</span>}</div></div></div></div></section><aside className="players">{players.map((p,i)=><div key={p.id} className={`playerCard ${rarityClass(equippedTitle(p)?.rarity)} ${i===turn?'current':''}`}><b>{p.animal} {displayName(p)}</b><p>{ageText(p.ageMonths)}</p><p>現金 {money(p.cash)}｜快樂 {p.happiness}｜名譽 {p.reputation}</p><p>{p.career?`正在${p.career}｜進度 ${(p.careerProgress||0)}/${(p.careerLayout||careerBoards[p.career]).length}`:`外圈 ${p.outerPos}`}</p><button className="walletOpenBtn" onClick={()=>showPlayerWallet(i)}>查看人生皮夾／頭銜</button></div>)}</aside></main>{modal&&<Modal modal={modal} close={()=>setModal(null)}/>}</div>;
 }
 
 function CoinRain(){
