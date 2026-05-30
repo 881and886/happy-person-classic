@@ -12553,9 +12553,9 @@ function App(){
   function careerTurningPoint(career){
     setModal({
       title:`🔄 ${career}事業轉折點`,
-      desc:"你開始思考：這真的是我想走的人生嗎？
+      desc:`你開始思考：這真的是我想走的人生嗎？
 
-重新出發會回到本職業起點，重新經歷這段職業道路；繼續前進則維持目前方向。",
+重新出發會回到本職業起點，重新經歷這段職業道路；繼續前進則維持目前方向。`,
       actions:[
         {label:"重新出發", onClick:()=>{updateCurrent(p=>({...p, careerPos:0, careerProgress:0, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:`${career}事業轉折點`,desc:"他選擇回到職業起點，重新出發。",type:"careerTurn",important:true}]})); setModal(null); nextTurn();}},
         {label:"繼續前進", onClick:()=>{updateCurrent(p=>({...p, lifeLog:[...p.lifeLog,{ageMonths:p.ageMonths,title:`${career}事業轉折點`,desc:"他短暫動搖，最後仍選擇沿著原路繼續前進。",type:"careerTurn",important:true}]})); setModal(null); nextTurn();}}
